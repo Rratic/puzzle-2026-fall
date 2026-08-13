@@ -3,6 +3,7 @@ const levels = [
   level("library", () => import("./library/level.js")),
   level("compass", () => import("./compass/level.js")),
   level("hyperbolic", () => import("./hyperbolic/level.js")),
+  level("maps", () => import("./maps/level.js")),
   level("mines", () => import("./mines/level.js")),
   level("quadratic", () => import("./quadratic/level.js")),
 ];
