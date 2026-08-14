@@ -6,6 +6,8 @@ const levels = [
   level("maps", () => import("./maps/level.js")),
   level("mines", () => import("./mines/level.js")),
   level("quadratic", () => import("./quadratic/level.js")),
+  level("numbers", () => import("./numbers/level.js")),
+  level("knots", () => import("./knots/level.js")),
 ];
 
 function level(id, load) {

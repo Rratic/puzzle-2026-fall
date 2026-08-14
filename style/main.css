@@ -205,6 +205,13 @@ h1 {
 	font-weight: 720;
 }
 
+.rich-text .katex-display {
+	overflow-x: auto;
+	overflow-y: hidden;
+	margin: 0.35em 0;
+	padding: 0.15em 0;
+}
+
 .canvas-state::before {
 	content: "未完成";
 }
@@ -275,6 +282,78 @@ h1 {
 	font-weight: 700;
 }
 
+.polynomial-answer {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	gap: 8px;
+	width: min(100%, 920px);
+	margin-inline: auto;
+}
+
+.polynomial-input {
+	min-width: 0;
+	height: 44px;
+	padding: 0 12px;
+	color: var(--text);
+	background: #ffffff;
+	border: 1px solid #b8c0c8;
+	border-radius: 6px;
+	font: 600 0.95rem ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.polynomial-input:focus {
+	border-color: var(--blue);
+	outline: 2px solid rgba(36, 87, 197, 0.22);
+	outline-offset: 0;
+}
+
+.polynomial-input[aria-invalid="true"] {
+	border-color: #b42318;
+}
+
+.polynomial-input:disabled {
+	color: #3d4a45;
+	background: #eef7f1;
+}
+
+.polynomial-submit {
+	min-width: 76px;
+	height: 44px;
+	padding: 0 16px;
+	color: #ffffff;
+	background: var(--blue);
+	border-radius: 6px;
+	font-weight: 760;
+	cursor: pointer;
+}
+
+.polynomial-submit:hover,
+.polynomial-submit:focus-visible {
+	background: #1d46a0;
+	outline: 0;
+}
+
+.polynomial-submit:disabled {
+	background: #8795a8;
+	cursor: default;
+}
+
+.polynomial-feedback {
+	grid-column: 1 / -1;
+	min-height: 1.35em;
+	color: var(--muted);
+	font-size: 0.86rem;
+	font-weight: 650;
+}
+
+.polynomial-feedback.is-error {
+	color: #b42318;
+}
+
+.polynomial-feedback.is-success {
+	color: var(--green);
+}
+
 .exit-actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -327,6 +406,18 @@ h1 {
 	.exit-button {
 		justify-content: center;
 		width: 100%;
+	}
+
+	.polynomial-answer {
+		grid-template-columns: 1fr;
+	}
+
+	.polynomial-submit {
+		width: 100%;
+	}
+
+	.polynomial-feedback {
+		grid-column: 1;
 	}
 }
 

@@ -8,6 +8,17 @@ const levelContent = document.querySelector("#level-content");
 
 let activeSession = null;
 let renderRequestId = 0;
+let mathRendererPromise = null;
+const KATEX_BASE_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist";
+const MATH_OPTIONS = {
+  delimiters: [
+    { left: "$$", right: "$$", display: true },
+    { left: "\\[", right: "\\]", display: true },
+    { left: "$", right: "$", display: false },
+    { left: "\\(", right: "\\)", display: false },
+  ],
+  throwOnError: false,
+};
 
 function readRecords() {
   try {
@@ -95,8 +106,63 @@ function renderRichTextBlock(session, block) {
   const content = document.createElement("div");
   content.className = "rich-text";
   content.innerHTML = block.html || "";
+  if (block.math) void renderMath(content);
   panel.append(content);
   return { block, element: panel, destroy() {} };
+}
+
+async function renderMath(element) {
+  try {
+    await loadMathRenderer();
+    if (!element.isConnected) return;
+    window.renderMathInElement(element, MATH_OPTIONS);
+  } catch (error) {
+    console.error("Unable to render math content.", error);
+  }
+}
+
+function loadMathRenderer() {
+  if (typeof window.renderMathInElement === "function") {
+    return Promise.resolve();
+  }
+  if (!mathRendererPromise) {
+    mathRendererPromise = Promise.all([
+      loadStylesheet(`${KATEX_BASE_URL}/katex.min.css`),
+      loadScript(`${KATEX_BASE_URL}/katex.min.js`).then(() =>
+        loadScript(`${KATEX_BASE_URL}/contrib/auto-render.min.js`),
+      ),
+    ]).then(() => {
+      if (typeof window.renderMathInElement !== "function") {
+        throw new Error("KaTeX auto-render did not initialize.");
+      }
+    });
+  }
+  return mathRendererPromise;
+}
+
+function loadStylesheet(href) {
+  return new Promise((resolve, reject) => {
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href;
+    link.addEventListener("load", resolve, { once: true });
+    link.addEventListener("error", () => reject(new Error(`Unable to load ${href}.`)), {
+      once: true,
+    });
+    document.head.append(link);
+  });
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.addEventListener("load", resolve, { once: true });
+    script.addEventListener("error", () => reject(new Error(`Unable to load ${src}.`)), {
+      once: true,
+    });
+    document.head.append(script);
+  });
 }
 
 function renderCanvasBlock(session, config, blockIndex) {

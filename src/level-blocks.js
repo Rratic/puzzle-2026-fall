@@ -38,8 +38,13 @@ function validateBlock(levelId, block, index, knownLevels) {
     throw new TypeError(`${location} has an unknown block type.`);
   }
 
-  if (block.type === "text" && !block.src) {
-    throw new TypeError(`${location} must provide src.`);
+  if (block.type === "text") {
+    if (!block.src) {
+      throw new TypeError(`${location} must provide src.`);
+    }
+    if (block.math != null && typeof block.math !== "boolean") {
+      throw new TypeError(`${location} math must be a boolean.`);
+    }
   }
   if (block.type === "canvas") {
     if (typeof block.title !== "string" || block.title.length === 0) {
