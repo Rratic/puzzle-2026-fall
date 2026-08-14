@@ -19,17 +19,18 @@ function quiz(title, question) {
 const knotsLevel = {
   id: "knots",
   blocks: [
-    textBlock(new URL("./content/intro.html", import.meta.url), {
+    textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
       math: true,
       title: "扭结不变量",
     }),
-    textBlock(new URL("./content/homfly.html", import.meta.url), { math: true }),
+    textBlock(new URL("./content/homfly.md", import.meta.url), { math: true }),
     quiz("两个分离的圆", QUESTIONS.unlink),
     quiz("两个互相穿过的圈", QUESTIONS.hopf),
     quiz("右手三叶结", QUESTIONS.trefoil),
     quiz("8 字结", QUESTIONS.figureEight),
     quiz("五叶结", QUESTIONS.cinquefoil),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
   ],
 };
 

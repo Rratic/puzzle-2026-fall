@@ -1,4 +1,4 @@
-import { canvasBlock, textBlock } from "../level-blocks.js";
+import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
 import {
   createFourColorController,
   HEIGHT,
@@ -9,7 +9,7 @@ import { PLANAR_GRAPH } from "./graph-data.js";
 const mapsLevel = {
   id: "maps",
   blocks: [
-    textBlock(new URL("./content/intro.html", import.meta.url), {
+    textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
       title: "平面图的四染色",
     }),
@@ -21,6 +21,11 @@ const mapsLevel = {
       graph: PLANAR_GRAPH,
       createController: createFourColorController,
     }),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
+    actionsBlock([
+      { label: "进入弯曲回廊", target: "hyperbolic" },
+      { label: "检查算术控制室", target: "numbers" },
+    ]),
   ],
 };
 

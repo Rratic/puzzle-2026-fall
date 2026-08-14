@@ -1,10 +1,10 @@
-import { canvasBlock, textBlock } from "../level-blocks.js";
+import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
 import { createMinesweeperController } from "./controller.js";
 
 const minesLevel = {
   id: "mines",
   blocks: [
-    textBlock(new URL("./content/intro.html", import.meta.url), {
+    textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
       title: "扫雷",
     }),
@@ -16,6 +16,8 @@ const minesLevel = {
       mapSrc: new URL("./mines.json", import.meta.url),
       createController: createMinesweeperController,
     }),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
+    actionsBlock([{ label: "查看地下设施图", target: "maps" }]),
   ],
 };
 

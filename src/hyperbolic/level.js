@@ -1,10 +1,10 @@
-import { canvasBlock, textBlock } from "../level-blocks.js";
+import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
 import { createHyperRogueController, VIEWPORT } from "./controller.js";
 
 const hyperbolicLevel = {
   id: "hyperbolic",
   blocks: [
-    textBlock(new URL("./content/intro.html", import.meta.url), {
+    textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
       title: "双曲圆盘",
     }),
@@ -15,6 +15,8 @@ const hyperbolicLevel = {
       height: VIEWPORT.height,
       createController: createHyperRogueController,
     }),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
+    actionsBlock([{ label: "进入单规室", target: "compass" }]),
   ],
 };
 

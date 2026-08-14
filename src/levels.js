@@ -1,12 +1,12 @@
 const levels = [
   level("corridor", () => import("./corridor/level.js")),
   level("library", () => import("./library/level.js")),
-  level("compass", () => import("./compass/level.js")),
-  level("hyperbolic", () => import("./hyperbolic/level.js")),
-  level("maps", () => import("./maps/level.js")),
   level("mines", () => import("./mines/level.js")),
-  level("quadratic", () => import("./quadratic/level.js")),
+  level("maps", () => import("./maps/level.js")),
+  level("hyperbolic", () => import("./hyperbolic/level.js")),
+  level("compass", () => import("./compass/level.js")),
   level("numbers", () => import("./numbers/level.js")),
+  level("quadratic", () => import("./quadratic/level.js")),
   level("knots", () => import("./knots/level.js")),
 ];
 

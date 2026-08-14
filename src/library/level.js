@@ -6,7 +6,7 @@ const WORKSPACE = Object.freeze({ width: 1000, height: 690 });
 const libraryLevel = {
   id: "library",
   blocks: [
-    textBlock(new URL("./content/intro.html", import.meta.url), {
+    textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
       title: "智华楼一楼图书角",
     }),
@@ -22,7 +22,7 @@ const libraryLevel = {
       ),
       createController: createPackingController,
     }),
-    textBlock(new URL("./content/complete.html", import.meta.url)),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
     actionsBlock([{ label: "前往地下室", target: "mines" }]),
   ],
 };

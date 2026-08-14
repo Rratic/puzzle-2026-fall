@@ -8,7 +8,9 @@ const levelContent = document.querySelector("#level-content");
 
 let activeSession = null;
 let renderRequestId = 0;
+let markdownRendererPromise = null;
 let mathRendererPromise = null;
+const MARKED_URL = "https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js";
 const KATEX_BASE_URL = "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist";
 const MATH_OPTIONS = {
   delimiters: [
@@ -46,7 +48,9 @@ async function loadTextBlock(block) {
   if (!response.ok) {
     throw new Error(`Unable to load ${response.url}: HTTP ${response.status}.`);
   }
-  return { ...block, html: await response.text() };
+  const markdown = await response.text();
+  await loadMarkdownRenderer();
+  return { ...block, html: window.marked.parse(markdown, { gfm: true }) };
 }
 
 async function loadLevel(entry) {
@@ -119,6 +123,20 @@ async function renderMath(element) {
   } catch (error) {
     console.error("Unable to render math content.", error);
   }
+}
+
+function loadMarkdownRenderer() {
+  if (typeof window.marked?.parse === "function") {
+    return Promise.resolve();
+  }
+  if (!markdownRendererPromise) {
+    markdownRendererPromise = loadScript(MARKED_URL).then(() => {
+      if (typeof window.marked?.parse !== "function") {
+        throw new Error("Marked did not initialize.");
+      }
+    });
+  }
+  return markdownRendererPromise;
 }
 
 function loadMathRenderer() {
