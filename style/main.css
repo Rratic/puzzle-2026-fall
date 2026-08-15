@@ -124,8 +124,11 @@ h1 {
 }
 
 .rich-text img {
+	display: block;
 	width: 60%;
-	justify-self: center;
+	max-width: 100%;
+	height: auto;
+	margin-inline: auto;
 }
 
 .canvas-panel {

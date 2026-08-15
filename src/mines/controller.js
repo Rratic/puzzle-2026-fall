@@ -339,11 +339,7 @@ class MinesweeperLogicController {
   triggerMine(cell) {
     this.exploded = true;
     this.explodedCell = cell;
-    this.cells.forEach((candidate) => {
-      if (candidate.mine) {
-        candidate.revealed = true;
-      }
-    });
+    cell.revealed = true;
   }
 
   checkSolved() {
