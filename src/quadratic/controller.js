@@ -9,7 +9,7 @@ const VIEW = {
   left: 62,
   right: 890,
   top: 160,
-  bottom: 582,
+  bottom: 742,
   xMin: -2.15,
   xMax: 2.15,
   yMin: -1.25,
@@ -29,13 +29,17 @@ class ConicController {
     this.coefficients = [Array(6).fill(0), Array(6).fill(0)];
     this.solved = false;
     this.regions = [];
+    this.compactLayout = false;
+    this.intersectionHitRadius = 15;
     this.handleResize = () => {
       resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
+      this.updateResponsiveLayout();
       this.draw();
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
 
     resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
+    this.updateResponsiveLayout();
     canvas.addEventListener("pointerdown", this.handlePointerDown);
     window.addEventListener("resize", this.handleResize);
     this.draw();
@@ -69,7 +73,8 @@ class ConicController {
     if (!this.solved && this.hasTwoCurves()) {
       const selected = conicIntersections(...this.coefficients).find((entry) => {
         const screen = worldToScreen(entry.x, entry.y);
-        return Math.hypot(screen.x - point.x, screen.y - point.y) <= 15;
+        return Math.hypot(screen.x - point.x, screen.y - point.y) <=
+          this.intersectionHitRadius;
       });
       if (selected) {
         this.checkIntersection(selected);
@@ -96,6 +101,14 @@ class ConicController {
 
   hasTwoCurves() {
     return this.coefficients.every((row) => row.some((value) => value !== 0));
+  }
+
+  updateResponsiveLayout() {
+    const displayWidth = this.canvas.getBoundingClientRect().width || this.config.width;
+    this.compactLayout = displayWidth < 760;
+    this.intersectionHitRadius = this.compactLayout ? 24 : 15;
+    VIEW.top = this.compactLayout ? 342 : 160;
+    VIEW.bottom = this.config.height - 18;
   }
 
   draw() {
@@ -129,9 +142,56 @@ class ConicController {
     ctx.textAlign = "left";
     ctx.fillText("Ax² + Bxy + Cy² + Dx + Ey + F = 0", 20, 20);
 
-    this.coefficientRow(0, 42, "I", "#2457c5");
-    this.coefficientRow(1, 96, "II", "#c55232");
-    this.clearButton(850, 8, 88, 30);
+    if (this.compactLayout) {
+      this.compactCoefficientGroup(0, 52, "I", "#2457c5");
+      this.compactCoefficientGroup(1, 190, "II", "#c55232");
+      this.clearButton(830, 8, 108, 36);
+    } else {
+      this.coefficientRow(0, 42, "I", "#2457c5");
+      this.coefficientRow(1, 96, "II", "#c55232");
+      this.clearButton(850, 8, 88, 30);
+    }
+  }
+
+  compactCoefficientGroup(equation, y, label, color) {
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
+    ctx.font = "700 16px system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(label, 25, y + 63);
+    ["A", "B", "C", "D", "E", "F"].forEach((name, index) => {
+      const row = Math.floor(index / 3);
+      const column = index % 3;
+      this.compactStepper(
+        equation,
+        index,
+        48 + column * 296,
+        y + row * 68,
+        name,
+        color,
+      );
+    });
+  }
+
+  compactStepper(equation, coefficient, x, y, name, color) {
+    const ctx = this.ctx;
+    ctx.fillStyle = "#59616c";
+    ctx.font = "700 15px ui-monospace, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(name, x + 8, y + 29);
+
+    this.deltaButton(equation, coefficient, -1, x + 24, y, "−", color, 58, 58);
+    ctx.fillStyle = "#f6f8fa";
+    ctx.strokeStyle = "#c7ced7";
+    ctx.lineWidth = 1;
+    roundedRect(ctx, x + 90, y, 62, 58, 4);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#18202a";
+    ctx.font = "700 18px ui-monospace, Consolas, monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(String(this.coefficients[equation][coefficient]), x + 121, y + 29);
+    this.deltaButton(equation, coefficient, 1, x + 160, y, "+", color, 58, 58);
   }
 
   coefficientRow(equation, y, label, color) {
@@ -166,24 +226,24 @@ class ConicController {
     this.deltaButton(equation, coefficient, 1, x + 102, y, "+", color);
   }
 
-  deltaButton(equation, coefficient, amount, x, y, label, color) {
+  deltaButton(equation, coefficient, amount, x, y, label, color, width = 30, height = 36) {
     const ctx = this.ctx;
     ctx.fillStyle = "#ffffff";
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.25;
-    roundedRect(ctx, x, y, 30, 36, 4);
+    roundedRect(ctx, x, y, width, height, 4);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = color;
     ctx.font = "600 17px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(label, x + 15, y + 18);
+    ctx.fillText(label, x + width / 2, y + height / 2);
     this.regions.push({
       x,
       y,
-      width: 30,
-      height: 36,
+      width,
+      height,
       type: "delta",
       equation,
       coefficient,

@@ -5,7 +5,7 @@ function puzzle(options) {
   return canvasBlock({
     ...options,
     width: 960,
-    height: 600,
+    height: 760,
     createController: createConicController,
   });
 }

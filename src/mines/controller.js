@@ -19,6 +19,7 @@ const SYMBOL_TO_CELL = Object.freeze({
 });
 
 const DRAG_THRESHOLD = 6;
+const LONG_PRESS_DURATION = 520;
 
 export function createMinesweeperController(options) {
   return new MinesweeperLogicController(options);
@@ -38,10 +39,12 @@ class MinesweeperLogicController {
     this.solved = false;
     this.exploded = false;
     this.explodedCell = null;
+    this.ignoreContextMenuUntil = 0;
 
     this.handlePointerDown = (event) => this.onPointerDown(event);
     this.handlePointerMove = (event) => this.onPointerMove(event);
     this.handlePointerUp = (event) => this.onPointerUp(event);
+    this.handlePointerCancel = (event) => this.onPointerCancel(event);
     this.handleContextMenu = (event) => this.onContextMenu(event);
     this.handleKeyDown = (event) => this.onKeyDown(event);
     this.handleResize = () => {
@@ -72,7 +75,7 @@ class MinesweeperLogicController {
     this.canvas.addEventListener("pointerdown", this.handlePointerDown);
     this.canvas.addEventListener("pointermove", this.handlePointerMove);
     this.canvas.addEventListener("pointerup", this.handlePointerUp);
-    this.canvas.addEventListener("pointercancel", this.handlePointerUp);
+    this.canvas.addEventListener("pointercancel", this.handlePointerCancel);
     this.canvas.addEventListener("contextmenu", this.handleContextMenu);
     this.canvas.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("resize", this.handleResize);
@@ -83,10 +86,11 @@ class MinesweeperLogicController {
     this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
     this.canvas.removeEventListener("pointermove", this.handlePointerMove);
     this.canvas.removeEventListener("pointerup", this.handlePointerUp);
-    this.canvas.removeEventListener("pointercancel", this.handlePointerUp);
+    this.canvas.removeEventListener("pointercancel", this.handlePointerCancel);
     this.canvas.removeEventListener("contextmenu", this.handleContextMenu);
     this.canvas.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("resize", this.handleResize);
+    this.clearLongPress();
   }
 
   async loadMap() {
@@ -164,7 +168,15 @@ class MinesweeperLogicController {
       id: event.pointerId,
       start: point,
       dragged: false,
+      longPressTriggered: false,
+      longPressTimer: 0,
     };
+    if (event.pointerType !== "mouse") {
+      this.pointer.longPressTimer = window.setTimeout(
+        () => this.onLongPress(event.pointerId),
+        LONG_PRESS_DURATION,
+      );
+    }
     this.canvas.setPointerCapture?.(event.pointerId);
   }
 
@@ -187,8 +199,8 @@ class MinesweeperLogicController {
 
     if (totalDistance >= DRAG_THRESHOLD) {
       this.pointer.dragged = true;
+      this.clearLongPress();
     }
-
   }
 
   onPointerUp(event) {
@@ -197,8 +209,10 @@ class MinesweeperLogicController {
     }
 
     event.preventDefault();
+    this.clearLongPress();
     this.canvas.releasePointerCapture?.(event.pointerId);
     const wasDragged = this.pointer.dragged;
+    const wasLongPress = this.pointer.longPressTriggered;
     const point = canvasPointFromEvent(
       this.canvas,
       event,
@@ -207,7 +221,7 @@ class MinesweeperLogicController {
     );
     this.pointer = null;
 
-    if (!wasDragged && event.button === 0) {
+    if (!wasDragged && !wasLongPress && event.button === 0) {
       if (this.exploded) {
         this.resetBoard();
         this.updateStatus();
@@ -218,21 +232,53 @@ class MinesweeperLogicController {
     }
   }
 
-  onContextMenu(event) {
-    event.preventDefault();
-    if (!this.ready || this.exploded || this.solved) {
+  onPointerCancel(event) {
+    if (!this.pointer || this.pointer.id !== event.pointerId) {
       return;
     }
+    this.clearLongPress();
+    this.canvas.releasePointerCapture?.(event.pointerId);
+    this.pointer = null;
+  }
 
+  onLongPress(pointerId) {
+    if (!this.pointer || this.pointer.id !== pointerId || this.pointer.dragged) {
+      return;
+    }
+    this.pointer.longPressTimer = 0;
+    this.pointer.longPressTriggered = true;
+    this.ignoreContextMenuUntil = performance.now() + 1000;
+    this.toggleFlagAtPoint(this.pointer.start);
+  }
+
+  clearLongPress() {
+    if (this.pointer?.longPressTimer) {
+      window.clearTimeout(this.pointer.longPressTimer);
+      this.pointer.longPressTimer = 0;
+    }
+  }
+
+  onContextMenu(event) {
+    event.preventDefault();
+    if (performance.now() < this.ignoreContextMenuUntil) {
+      return;
+    }
     const point = canvasPointFromEvent(
       this.canvas,
       event,
       this.config.width,
       this.config.height,
     );
+    this.toggleFlagAtPoint(point);
+  }
+
+  toggleFlagAtPoint(point) {
+    if (!this.ready || this.exploded || this.solved) {
+      return false;
+    }
     const position = this.pointToCell(point);
     if (!position) {
-      return;
+      return false;
     }
 
     const cell = this.getCell(position.column, position.row);
@@ -242,7 +288,9 @@ class MinesweeperLogicController {
       this.checkSolved();
       this.updateStatus();
       this.draw();
+      return true;
     }
+    return false;
   }
 
   onKeyDown(event) {

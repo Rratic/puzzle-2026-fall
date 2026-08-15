@@ -397,6 +397,19 @@ h1 {
 		padding: 20px;
 	}
 
+	.canvas-title-row {
+		min-height: 56px;
+		padding: 12px 14px;
+	}
+
+	.canvas-panel-content {
+		padding: 8px;
+	}
+
+	.canvas-state {
+		padding: 5px 8px;
+	}
+
 	.level-actions {
 		align-items: stretch;
 		flex-direction: column;

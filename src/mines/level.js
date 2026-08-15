@@ -10,7 +10,7 @@ const minesLevel = {
     }),
     canvasBlock({
       title: "扫雷",
-      caption: "左键揭开，右键插旗；单击已揭开的数字展开相邻格。",
+      caption: "点击揭开，长按或右键插旗；点击已揭开的数字展开相邻格。",
       width: 784,
       height: 560,
       mapSrc: new URL("./mines.json", import.meta.url),

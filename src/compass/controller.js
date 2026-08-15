@@ -289,13 +289,9 @@ class CompassController {
     this.hidePointMode = false;
     this.pointer = null;
     this.solved = false;
-    this.buttons = [
-      { id: "zoomOut", label: "−", x: 590, y: 30, width: 38, height: 38 },
-      { id: "zoomIn", label: "+", x: 636, y: 30, width: 38, height: 38 },
-      { id: "hidePoint", label: "隐藏点", x: 682, y: 30, width: 82, height: 38 },
-      { id: "undo", label: "撤销", x: 772, y: 30, width: 54, height: 38 },
-      { id: "reset", label: "重置", x: 834, y: 30, width: 56, height: 38 },
-    ];
+    this.buttons = [];
+    this.controlScale = 1;
+    this.hitScale = 1;
 
     this.onPointerDown = this.handlePointerDown.bind(this);
     this.onPointerMove = this.handlePointerMove.bind(this);
@@ -310,6 +306,7 @@ class CompassController {
         this.config.width,
         this.config.height,
       );
+      this.updateResponsiveLayout();
       this.draw();
     };
     resizeCanvasBuffer(
@@ -318,6 +315,7 @@ class CompassController {
       this.config.width,
       this.config.height,
     );
+    this.updateResponsiveLayout();
     this.canvas.style.cursor = "grab";
     this.canvas.style.touchAction = "none";
     this.canvas.addEventListener("pointerdown", this.onPointerDown);
@@ -348,6 +346,33 @@ class CompassController {
       initial: true,
       hidden: false,
     }));
+  }
+
+  updateResponsiveLayout() {
+    const displayWidth = this.canvas.getBoundingClientRect().width || this.config.width;
+    const displayScale = displayWidth / this.config.width;
+    this.controlScale = displayWidth < 820
+      ? clamp(44 / (38 * displayScale), 1, 1.65)
+      : 1;
+    this.hitScale = this.controlScale;
+
+    const height = Math.round(38 * this.controlScale);
+    const gap = Math.round(8 * this.controlScale);
+    const specs = [
+      { id: "zoomOut", label: "−", width: 38 },
+      { id: "zoomIn", label: "+", width: 38 },
+      { id: "hidePoint", label: "隐藏点", width: 82 },
+      { id: "undo", label: "撤销", width: 54 },
+      { id: "reset", label: "重置", width: 56 },
+    ];
+    const widths = specs.map((entry) => Math.round(entry.width * this.controlScale));
+    const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * (specs.length - 1);
+    let x = BOARD.right - 12 - totalWidth;
+    this.buttons = specs.map((entry, index) => {
+      const button = { ...entry, x, y: 30, width: widths[index], height };
+      x += widths[index] + gap;
+      return button;
+    });
   }
 
   handleKeyDown(event) {
@@ -478,7 +503,8 @@ class CompassController {
     if (this.hidePointMode) return;
 
     const candidate = this.intersections().find(
-      (entry) => distance(entry, at) <= INTERSECTION_HIT_RADIUS / this.viewScale,
+      (entry) =>
+        distance(entry, at) <= INTERSECTION_HIT_RADIUS * this.hitScale / this.viewScale,
     );
     if (candidate) {
       const expected = this.config.expectedPoints.find(
@@ -638,7 +664,10 @@ class CompassController {
   findPoint(at) {
     for (let index = this.points.length - 1; index >= 0; index -= 1) {
       if (this.points[index].hidden) continue;
-      if (distance(this.points[index], at) <= POINT_HIT_RADIUS / this.viewScale) return index;
+      if (
+        distance(this.points[index], at) <=
+        POINT_HIT_RADIUS * this.hitScale / this.viewScale
+      ) return index;
     }
     return -1;
   }
@@ -648,7 +677,10 @@ class CompassController {
       const entry = this.circles[index];
       if (!this.isCircleActive(entry)) continue;
       const center = this.points[entry.center];
-      if (Math.abs(distance(center, at) - entry.radius) <= 7 / this.viewScale) return index;
+      if (
+        Math.abs(distance(center, at) - entry.radius) <=
+        7 * this.hitScale / this.viewScale
+      ) return index;
     }
     return -1;
   }
@@ -695,8 +727,8 @@ class CompassController {
       ctx.stroke();
       ctx.fillStyle = disabled ? "#9aa1aa" : active ? "#2457c5" : "#28303b";
       ctx.font = button.id.startsWith("zoom")
-        ? "500 22px system-ui, sans-serif"
-        : "500 14px system-ui, sans-serif";
+        ? `500 ${Math.round(22 * this.controlScale)}px system-ui, sans-serif`
+        : `500 ${Math.round(14 * this.controlScale)}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.fillText(button.label, button.x + button.width / 2, button.y + button.height / 2 + 1);
       ctx.restore();
