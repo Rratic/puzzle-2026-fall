@@ -7,6 +7,7 @@ function puzzle(title, digit, target, numberCount) {
     caption: `把 ${numberCount} 个数字 ${digit} 全部合成 ${target}；每次把数字块拖到运算符上。`,
     width: 900,
     height: 460,
+    accessibility: { role: "application", focusable: false },
     digit,
     target,
     numberCount,

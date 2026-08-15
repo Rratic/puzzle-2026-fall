@@ -1,5 +1,6 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   resizeCanvasBuffer,
 } from "../canvas-utils.js";
 
@@ -48,49 +49,45 @@ class MinesweeperLogicController {
     this.handleContextMenu = (event) => this.onContextMenu(event);
     this.handleKeyDown = (event) => this.onKeyDown(event);
     this.handleResize = () => {
-      resizeCanvasBuffer(
+      if (resizeCanvasBuffer(
         this.canvas,
         this.ctx,
         this.config.width,
         this.config.height,
-      );
-      this.draw();
+      )) {
+        this.draw();
+      }
     };
 
     this.canvas.style.cursor = "default";
     this.canvas.style.touchAction = "none";
-    resizeCanvasBuffer(
-      this.canvas,
-      this.ctx,
-      this.config.width,
-      this.config.height,
-    );
-    this.bindEvents();
     this.updateStatus();
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.handlePointerDown },
+        { type: "pointermove", listener: this.handlePointerMove },
+        { type: "pointerup", listener: this.handlePointerUp },
+        { type: "pointercancel", listener: this.handlePointerCancel },
+        { type: "contextmenu", listener: this.handleContextMenu },
+        { type: "keydown", listener: this.handleKeyDown },
+      ],
+      onResize: this.handleResize,
+      onDeactivate: () => {
+        this.clearLongPress();
+        this.pointer = null;
+      },
+    });
     void this.loadMap();
   }
 
-  bindEvents() {
-    this.canvas.addEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.addEventListener("pointermove", this.handlePointerMove);
-    this.canvas.addEventListener("pointerup", this.handlePointerUp);
-    this.canvas.addEventListener("pointercancel", this.handlePointerCancel);
-    this.canvas.addEventListener("contextmenu", this.handleContextMenu);
-    this.canvas.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener("resize", this.handleResize);
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
     this.destroyed = true;
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerup", this.handlePointerUp);
-    this.canvas.removeEventListener("pointercancel", this.handlePointerCancel);
-    this.canvas.removeEventListener("contextmenu", this.handleContextMenu);
-    this.canvas.removeEventListener("keydown", this.handleKeyDown);
-    window.removeEventListener("resize", this.handleResize);
-    this.clearLongPress();
+    this.lifecycle.destroy();
   }
 
   async loadMap() {
@@ -118,14 +115,14 @@ class MinesweeperLogicController {
       this.ready = true;
       this.resetBoard();
       this.updateStatus();
-      this.draw();
+      if (this.lifecycle.active) this.draw();
     } catch (error) {
       if (this.destroyed) {
         return;
       }
       this.loadError = error instanceof Error ? error.message : "未知错误";
       this.updateStatus();
-      this.draw();
+      if (this.lifecycle.active) this.draw();
     }
   }
 

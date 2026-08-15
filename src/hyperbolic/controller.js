@@ -1,13 +1,10 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   normalizeAngle,
   resizeCanvasBuffer,
 } from "../canvas-utils.js";
-
-export const VIEWPORT = {
-  width: 920,
-  height: 680,
-};
+import { DISK } from "./layout.js";
 
 const TILING = {
   sides: 7,
@@ -19,12 +16,6 @@ const TILING = {
 
 const GLOBAL_BUCKET_SIZE = 0.02;
 const GLOBAL_CENTER_EPSILON = 0.006;
-
-const DISK = {
-  x: VIEWPORT.width / 2,
-  y: VIEWPORT.height / 2 + 8,
-  radius: 292,
-};
 
 const COLORS = {
   page: "#f5f2eb",
@@ -42,11 +33,11 @@ const COLORS = {
   muted: "#657178",
 };
 
-export function createHyperRogueController(options) {
-  return new HyperRogueController(options);
+export function createHyperbolicController(options) {
+  return new HyperbolicController(options);
 }
 
-class HyperRogueController {
+class HyperbolicController {
   constructor({ config, canvas, onSolved }) {
     this.config = config;
     this.canvas = canvas;
@@ -67,44 +58,51 @@ class HyperRogueController {
     this.visibleIds = new Set();
 
     this.handleResize = () => {
-      resizeCanvasBuffer(
+      if (resizeCanvasBuffer(
         this.canvas,
         this.ctx,
         this.config.width,
         this.config.height,
-      );
-      this.draw();
+      )) {
+        this.draw();
+      }
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
     this.handlePointerMove = (event) => this.onPointerMove(event);
     this.handlePointerUp = (event) => this.onPointerUp(event);
     this.handlePointerCancel = (event) => this.onPointerCancel(event);
 
-    resizeCanvasBuffer(
-      this.canvas,
-      this.ctx,
-      this.config.width,
-      this.config.height,
-    );
-    this.bindEvents();
     this.refreshVisibility();
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.handlePointerDown },
+        { type: "pointermove", listener: this.handlePointerMove },
+        { type: "pointerup", listener: this.handlePointerUp },
+        { type: "pointercancel", listener: this.handlePointerCancel },
+      ],
+      onResize: this.handleResize,
+      onDeactivate: () => {
+        window.cancelAnimationFrame(this.animationFrame);
+        if (this.animating) {
+          recenterWorld(this.world, this.currentId);
+          this.camera = { x: 0, y: 0 };
+          this.animating = false;
+          this.refreshVisibility();
+        }
+        this.drag = null;
+        this.dragOffset = { x: 0, y: 0 };
+      },
+    });
   }
 
-  bindEvents() {
-    this.canvas.addEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.addEventListener("pointermove", this.handlePointerMove);
-    this.canvas.addEventListener("pointerup", this.handlePointerUp);
-    this.canvas.addEventListener("pointercancel", this.handlePointerCancel);
-    window.addEventListener("resize", this.handleResize);
+  setActive(active) {
+    this.lifecycle.setActive(active);
+    if (active) this.checkSolved();
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerup", this.handlePointerUp);
-    this.canvas.removeEventListener("pointercancel", this.handlePointerCancel);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
     window.cancelAnimationFrame(this.animationFrame);
   }
 
@@ -131,7 +129,6 @@ class HyperRogueController {
     }
 
     event.preventDefault();
-    this.canvas.focus({ preventScroll: true });
     const point = canvasPointFromEvent(
       this.canvas,
       event,

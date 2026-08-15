@@ -218,16 +218,18 @@ function renderCanvasBlock(session, config, blockIndex) {
   frame.style.setProperty("--canvas-height", config.height);
   const canvas = document.createElement("canvas");
   canvas.className = "puzzle-canvas";
-  canvas.width = config.width;
-  canvas.height = config.height;
-  canvas.tabIndex = 0;
-  canvas.setAttribute("role", "img");
+  canvas.width = 1;
+  canvas.height = 1;
+  if (config.accessibility?.focusable) canvas.tabIndex = 0;
+  canvas.setAttribute("role", config.accessibility?.role || "img");
   canvas.setAttribute("aria-label", config.title);
+  const accessory = document.createElement("div");
+  accessory.className = "canvas-accessory";
   const caption = document.createElement("div");
   caption.className = "canvas-caption";
   caption.textContent = config.caption || "";
   frame.append(canvas);
-  content.append(frame, caption);
+  content.append(frame, accessory, caption);
   panel.append(titleRow, content);
 
   let controller = null;
@@ -236,18 +238,28 @@ function renderCanvasBlock(session, config, blockIndex) {
     if (controller || initializationFailed || session.destroyed) {
       return;
     }
+    let candidate = null;
     try {
-      const candidate = config.createController({
+      candidate = config.createController({
         config,
         canvas,
+        mount: accessory,
         onSolved: () => markCanvasSolved(session, canvasIndex, state),
       });
-      if (!candidate || typeof candidate.destroy !== "function") {
+      if (
+        !candidate ||
+        typeof candidate.destroy !== "function" ||
+        typeof candidate.setActive !== "function"
+      ) {
         candidate?.destroy?.();
-        throw new TypeError(`Canvas "${config.title}" controller must provide destroy().`);
+        throw new TypeError(
+          `Canvas "${config.title}" controller must provide setActive() and destroy().`,
+        );
       }
+      candidate.setActive(true);
       controller = candidate;
     } catch (error) {
+      candidate?.destroy?.();
       initializationFailed = true;
       caption.classList.add("canvas-error");
       caption.textContent = "题目初始化失败。";
@@ -261,10 +273,13 @@ function renderCanvasBlock(session, config, blockIndex) {
     titleRow.setAttribute("aria-expanded", String(!isExpanded));
     content.hidden = isExpanded;
     if (!isExpanded) {
-      initialize();
+      if (controller) controller.setActive(true);
+      else initialize();
       if (!session.canvasState[canvasIndex]) {
         scrollToBlock(panel);
       }
+    } else {
+      controller?.setActive(false);
     }
   };
   titleRow.addEventListener("click", handleToggle);

@@ -6,6 +6,7 @@ function puzzle(options) {
     ...options,
     width: 960,
     height: 760,
+    accessibility: { role: "application", focusable: false },
     createController: createConicController,
   });
 }

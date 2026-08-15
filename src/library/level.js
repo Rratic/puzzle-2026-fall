@@ -15,6 +15,7 @@ const libraryLevel = {
       caption: "拖动方块移动；选中方块后，拖动圆盘指针旋转。",
       width: WORKSPACE.width,
       height: WORKSPACE.height,
+      accessibility: { role: "application", focusable: false },
       boxTexture: new URL("../../assets/images/library/bookbox.jpg", import.meta.url),
       bookTextures: Array.from(
         { length: 17 },

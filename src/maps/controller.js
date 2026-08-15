@@ -1,12 +1,10 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   resizeCanvasBuffer,
 } from "../canvas-utils.js";
 
-export const WIDTH = 960;
-export const HEIGHT = 620;
-
-const GRAPH_FRAME = Object.freeze({ x: 24, y: 24, width: 912, height: 572 });
+const GRAPH_PADDING = 24;
 const VERTEX_RADIUS = 24;
 const PALETTE = [
   "#e35d5d",
@@ -19,65 +17,16 @@ export function createFourColorController(options) {
   return new PlanarGraphColoringController(options);
 }
 
-export function validatePlanarGraph(graph) {
-  if (!graph || typeof graph !== "object") {
-    throw new TypeError("平面图数据必须是一个对象。");
-  }
-  if (!Array.isArray(graph.vertices) || graph.vertices.length === 0) {
-    throw new TypeError("平面图至少需要一个顶点。");
-  }
-  if (!Array.isArray(graph.edges)) {
-    throw new TypeError("平面图必须提供 edges 数组。");
-  }
-
-  const vertexById = new Map();
-  const vertices = graph.vertices.map((vertex, index) => {
-    if (!vertex || typeof vertex.id !== "string" || vertex.id.length === 0) {
-      throw new TypeError(`第 ${index + 1} 个顶点必须提供非空字符串 id。`);
-    }
-    if (vertexById.has(vertex.id)) {
-      throw new Error(`顶点 id "${vertex.id}" 重复。`);
-    }
-    if (
-      !Number.isFinite(vertex.x) || vertex.x < 0 || vertex.x > 1 ||
-      !Number.isFinite(vertex.y) || vertex.y < 0 || vertex.y > 1
-    ) {
-      throw new TypeError(`顶点 "${vertex.id}" 的 x、y 必须在 0 到 1 之间。`);
-    }
-    const normalized = {
-      id: vertex.id,
-      x: vertex.x,
-      y: vertex.y,
-    };
-    vertexById.set(vertex.id, index);
-    return normalized;
-  });
-
-  const seenEdges = new Set();
-  const edges = graph.edges.map((edge, index) => {
-    if (!Array.isArray(edge) || edge.length !== 2) {
-      throw new TypeError(`第 ${index + 1} 条边必须写成 [起点 id, 终点 id]。`);
-    }
-    const [firstId, secondId] = edge;
-    if (!vertexById.has(firstId) || !vertexById.has(secondId)) {
-      throw new Error(`边 ${index + 1} 引用了不存在的顶点。`);
-    }
-    if (firstId === secondId) {
-      throw new Error(`顶点 "${firstId}" 上的自环无法进行正常顶点染色。`);
-    }
-    const first = vertexById.get(firstId);
-    const second = vertexById.get(secondId);
-    const key = first < second ? `${first}:${second}` : `${second}:${first}`;
-    if (seenEdges.has(key)) {
-      throw new Error(`边 "${firstId}-${secondId}" 重复。`);
-    }
-    seenEdges.add(key);
-    return { first, second, key };
-  });
-
+function compileGraph(graph) {
+  const vertexById = new Map(
+    graph.vertices.map((vertex, index) => [vertex.id, index]),
+  );
   return {
-    vertices,
-    edges,
+    vertices: graph.vertices,
+    edges: graph.edges.map(([firstId, secondId]) => ({
+      first: vertexById.get(firstId),
+      second: vertexById.get(secondId),
+    })),
   };
 }
 
@@ -87,7 +36,7 @@ class PlanarGraphColoringController {
     this.canvas = canvas;
     this.onSolved = onSolved;
     this.ctx = canvas.getContext("2d");
-    this.graph = validatePlanarGraph(config.graph);
+    this.graph = compileGraph(config.graph);
     this.colors = Array(this.graph.vertices.length).fill(-1);
     this.hoveredVertex = -1;
     this.selectedVertex = -1;
@@ -99,33 +48,33 @@ class PlanarGraphColoringController {
     this.handleContextMenu = (event) => this.onContextMenu(event);
     this.handleKeyDown = (event) => this.onKeyDown(event);
     this.handleResize = () => {
-      resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-      this.draw();
+      if (resizeCanvasBuffer(canvas, this.ctx, config.width, config.height)) {
+        this.draw();
+      }
     };
 
     this.canvas.style.touchAction = "manipulation";
-    resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-    this.bindEvents();
     this.updateStatus();
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.handlePointerDown },
+        { type: "pointermove", listener: this.handlePointerMove },
+        { type: "pointerleave", listener: this.handlePointerLeave },
+        { type: "contextmenu", listener: this.handleContextMenu },
+        { type: "keydown", listener: this.handleKeyDown },
+      ],
+      onResize: this.handleResize,
+      onDeactivate: () => this.onPointerLeave(),
+    });
   }
 
-  bindEvents() {
-    this.canvas.addEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.addEventListener("pointermove", this.handlePointerMove);
-    this.canvas.addEventListener("pointerleave", this.handlePointerLeave);
-    this.canvas.addEventListener("contextmenu", this.handleContextMenu);
-    this.canvas.addEventListener("keydown", this.handleKeyDown);
-    window.addEventListener("resize", this.handleResize);
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerleave", this.handlePointerLeave);
-    this.canvas.removeEventListener("contextmenu", this.handleContextMenu);
-    this.canvas.removeEventListener("keydown", this.handleKeyDown);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
   }
 
   onPointerDown(event) {
@@ -224,7 +173,7 @@ class PlanarGraphColoringController {
     let closest = -1;
     let closestDistance = VERTEX_RADIUS * VERTEX_RADIUS;
     this.graph.vertices.forEach((vertex, index) => {
-      const distance = distanceSquared(point, vertexPoint(vertex));
+      const distance = distanceSquared(point, this.vertexPoint(vertex));
       if (distance <= closestDistance) {
         closest = index;
         closestDistance = distance;
@@ -268,9 +217,9 @@ class PlanarGraphColoringController {
 
   draw() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.clearRect(0, 0, this.config.width, this.config.height);
     ctx.fillStyle = "#f7f8f5";
-    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillRect(0, 0, this.config.width, this.config.height);
     this.drawGraph();
   }
 
@@ -280,8 +229,8 @@ class PlanarGraphColoringController {
 
     ctx.save();
     this.graph.edges.forEach((edge) => {
-      const first = vertexPoint(this.graph.vertices[edge.first]);
-      const second = vertexPoint(this.graph.vertices[edge.second]);
+      const first = this.vertexPoint(this.graph.vertices[edge.first]);
+      const second = this.vertexPoint(this.graph.vertices[edge.second]);
       ctx.beginPath();
       ctx.moveTo(first.x, first.y);
       ctx.lineTo(second.x, second.y);
@@ -291,8 +240,8 @@ class PlanarGraphColoringController {
     });
 
     conflicts.forEach((edge) => {
-      const first = vertexPoint(this.graph.vertices[edge.first]);
-      const second = vertexPoint(this.graph.vertices[edge.second]);
+      const first = this.vertexPoint(this.graph.vertices[edge.first]);
+      const second = this.vertexPoint(this.graph.vertices[edge.second]);
       drawConflictMark(ctx, {
         x: (first.x + second.x) / 2,
         y: (first.y + second.y) / 2,
@@ -307,7 +256,7 @@ class PlanarGraphColoringController {
 
   drawVertex(vertex, index) {
     const ctx = this.ctx;
-    const point = vertexPoint(vertex);
+    const point = this.vertexPoint(vertex);
     const colorIndex = this.colors[index];
     const selected = index === this.selectedVertex;
     const hovered = index === this.hoveredVertex && !this.solved;
@@ -326,15 +275,15 @@ class PlanarGraphColoringController {
     ctx.stroke();
     ctx.restore();
   }
-}
 
-function vertexPoint(vertex) {
-  return {
-    x: GRAPH_FRAME.x + VERTEX_RADIUS + vertex.x *
-      (GRAPH_FRAME.width - VERTEX_RADIUS * 2),
-    y: GRAPH_FRAME.y + VERTEX_RADIUS + vertex.y *
-      (GRAPH_FRAME.height - VERTEX_RADIUS * 2),
-  };
+  vertexPoint(vertex) {
+    const innerWidth = this.config.width - GRAPH_PADDING * 2 - VERTEX_RADIUS * 2;
+    const innerHeight = this.config.height - GRAPH_PADDING * 2 - VERTEX_RADIUS * 2;
+    return {
+      x: GRAPH_PADDING + VERTEX_RADIUS + vertex.x * innerWidth,
+      y: GRAPH_PADDING + VERTEX_RADIUS + vertex.y * innerHeight,
+    };
+  }
 }
 
 function distanceSquared(first, second) {

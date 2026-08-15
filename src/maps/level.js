@@ -1,10 +1,8 @@
 import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
-import {
-  createFourColorController,
-  HEIGHT,
-  WIDTH,
-} from "./controller.js";
+import { createFourColorController } from "./controller.js";
 import { PLANAR_GRAPH } from "./graph-data.js";
+
+const SIZE = Object.freeze({ width: 960, height: 620 });
 
 const mapsLevel = {
   id: "maps",
@@ -16,8 +14,9 @@ const mapsLevel = {
     canvasBlock({
       title: "为平面图着色",
       caption: "点击顶点轮换颜色",
-      width: WIDTH,
-      height: HEIGHT,
+      width: SIZE.width,
+      height: SIZE.height,
+      accessibility: { role: "application", focusable: true },
       graph: PLANAR_GRAPH,
       createController: createFourColorController,
     }),

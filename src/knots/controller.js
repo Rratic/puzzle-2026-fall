@@ -1,50 +1,18 @@
-import { resizeCanvasBuffer } from "../canvas-utils.js";
+import {
+  createCanvasLifecycle,
+  resizeCanvasBuffer,
+} from "../canvas-utils.js";
 import {
   parseLaurentPolynomial,
   polynomialsEqual,
 } from "./polynomial.js";
-
-export const SIZE = Object.freeze({ width: 920, height: 460 });
-
-export const QUESTIONS = {
-  unlink: {
-    name: "两个分离的圆 U_2",
-    diagram: "unlink",
-    accent: "#8a5b18",
-    answer: "az^-1 - a^-1z^-1",
-  },
-  trefoil: {
-    name: "右手三叶结 3_1",
-    diagram: "trefoil",
-    accent: "#b9413b",
-    answer: "2a^-2 - a^-4 + a^-2z^2",
-  },
-  hopf: {
-    name: "正 Hopf 链环 2_1^2",
-    diagram: "hopf",
-    accent: "#276b61",
-    answer: "a^-1z^-1 - a^-3z^-1 + a^-1z",
-  },
-  figureEight: {
-    name: "8 字结 4_1",
-    diagram: "figureEight",
-    accent: "#315b91",
-    answer: "a^2 + a^-2 - 1 - z^2",
-  },
-  cinquefoil: {
-    name: "五叶结 5_1",
-    diagram: "cinquefoil",
-    accent: "#8a5b18",
-    answer: "3a^-4 - 2a^-6 + 4a^-4z^2 - a^-6z^2 + a^-4z^4",
-  },
-};
 
 export function createPolynomialInputController(options) {
   return new PolynomialInputController(options);
 }
 
 class PolynomialInputController {
-  constructor({ config, canvas, onSolved }) {
+  constructor({ config, canvas, mount, onSolved }) {
     this.config = config;
     this.canvas = canvas;
     this.onSolved = onSolved;
@@ -57,19 +25,21 @@ class PolynomialInputController {
     this.handleInput = () => this.clearFeedback();
     this.handleCanvasClick = () => this.input.focus({ preventScroll: true });
     this.handleResize = () => {
-      resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-      this.draw();
+      if (resizeCanvasBuffer(canvas, this.ctx, config.width, config.height)) {
+        this.draw();
+      }
     };
 
-    this.buildAnswerForm();
-    this.canvas.addEventListener("pointerdown", this.handleCanvasClick);
-    window.addEventListener("resize", this.handleResize);
-    resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
+    this.buildAnswerForm(mount);
     this.canvas.setAttribute("aria-label", `${this.question.name}的纽结图`);
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [{ type: "pointerdown", listener: this.handleCanvasClick }],
+      onResize: this.handleResize,
+    });
   }
 
-  buildAnswerForm() {
+  buildAnswerForm(mount) {
     this.form = document.createElement("form");
     this.form.className = "polynomial-answer";
 
@@ -95,14 +65,17 @@ class PolynomialInputController {
     this.form.append(this.input, this.submitButton, this.feedback);
     this.form.addEventListener("submit", this.handleSubmit);
     this.input.addEventListener("input", this.handleInput);
-    this.canvas.parentElement?.after(this.form);
+    mount.append(this.form);
+  }
+
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
     this.form.removeEventListener("submit", this.handleSubmit);
     this.input.removeEventListener("input", this.handleInput);
-    this.canvas.removeEventListener("pointerdown", this.handleCanvasClick);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
     this.form.remove();
   }
 
@@ -147,19 +120,20 @@ class PolynomialInputController {
 
   draw() {
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, SIZE.width, SIZE.height);
+    const { width, height } = this.config;
+    ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, SIZE.width, SIZE.height);
+    ctx.fillRect(0, 0, width, height);
     if (this.question.diagram === "unlink") {
-      drawUnlink(ctx, SIZE.width / 2, SIZE.height / 2, 112, this.question.accent);
+      drawUnlink(ctx, width / 2, height / 2, 112, this.question.accent);
     } else if (this.question.diagram === "hopf") {
-      drawHopfLink(ctx, SIZE.width / 2, SIZE.height / 2, 172, this.question.accent);
+      drawHopfLink(ctx, width / 2, height / 2, 172, this.question.accent);
     } else {
       drawParametricKnot(
         ctx,
         this.question.diagram,
-        SIZE.width / 2,
-        SIZE.height / 2,
+        width / 2,
+        height / 2,
         178,
         this.question.accent,
       );

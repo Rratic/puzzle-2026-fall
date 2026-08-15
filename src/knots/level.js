@@ -1,9 +1,8 @@
 import { canvasBlock, textBlock } from "../level-blocks.js";
-import {
-  createPolynomialInputController,
-  QUESTIONS,
-  SIZE,
-} from "./controller.js";
+import { createPolynomialInputController } from "./controller.js";
+import { QUESTIONS } from "./questions.js";
+
+const SIZE = Object.freeze({ width: 920, height: 460 });
 
 function quiz(title, question) {
   return canvasBlock({
@@ -11,6 +10,7 @@ function quiz(title, question) {
     caption: "输入完整多项式并提交。",
     width: SIZE.width,
     height: SIZE.height,
+    accessibility: { role: "img", focusable: false },
     question,
     createController: createPolynomialInputController,
   });

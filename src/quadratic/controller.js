@@ -1,5 +1,6 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   pointInRect,
   resizeCanvasBuffer,
   roundedRect,
@@ -32,27 +33,34 @@ class ConicController {
     this.compactLayout = false;
     this.intersectionHitRadius = 15;
     this.handleResize = () => {
-      resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-      this.updateResponsiveLayout();
-      this.draw();
+      const bufferChanged = resizeCanvasBuffer(
+        canvas,
+        this.ctx,
+        config.width,
+        config.height,
+      );
+      const layoutChanged = this.updateResponsiveLayout();
+      if (bufferChanged || layoutChanged) this.draw();
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
 
-    resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-    this.updateResponsiveLayout();
-    canvas.addEventListener("pointerdown", this.handlePointerDown);
-    window.addEventListener("resize", this.handleResize);
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [{ type: "pointerdown", listener: this.handlePointerDown }],
+      onResize: this.handleResize,
+    });
+  }
+
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
   }
 
   onPointerDown(event) {
     event.preventDefault();
-    this.canvas.focus();
     const point = canvasPointFromEvent(
       this.canvas,
       event,
@@ -105,10 +113,12 @@ class ConicController {
 
   updateResponsiveLayout() {
     const displayWidth = this.canvas.getBoundingClientRect().width || this.config.width;
+    const wasCompact = this.compactLayout;
     this.compactLayout = displayWidth < 760;
     this.intersectionHitRadius = this.compactLayout ? 24 : 15;
     VIEW.top = this.compactLayout ? 342 : 160;
     VIEW.bottom = this.config.height - 18;
+    return wasCompact !== this.compactLayout;
   }
 
   draw() {

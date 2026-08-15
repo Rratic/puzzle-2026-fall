@@ -1,5 +1,6 @@
 import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
-import { createCompassController, PUZZLES, SIZE } from "./controller.js";
+import { createCompassController, PUZZLES } from "./controller.js";
+import { SIZE } from "./layout.js";
 
 function puzzle(title, config) {
   return canvasBlock({
@@ -7,6 +8,7 @@ function puzzle(title, config) {
     caption: "单击两个可见点作圆；单击交点取点；隐藏模式下单击点可隐藏；单击圆周可隐藏圆；拖动平移，滚轮缩放。",
     width: SIZE.width,
     height: SIZE.height,
+    accessibility: { role: "application", focusable: true },
     ...config,
     createController: createCompassController,
   });

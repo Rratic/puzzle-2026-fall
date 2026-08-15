@@ -1,4 +1,5 @@
-// 归一化画布坐标
+// 在 vertices 中填写顶点坐标：x、y 是相对画布宽高的坐标。
+// 在 edges 中用两个顶点 id 表示一条连接关系。
 export const PLANAR_GRAPH = {
   vertices: [
     { id: "t0", x: 0.5, y: 1.0 },

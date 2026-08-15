@@ -1,14 +1,14 @@
 import {
   canvasPointFromEvent,
   clamp,
+  createCanvasLifecycle,
   distance,
   line,
   pointInRect,
   resizeCanvasBuffer,
   roundedRect,
 } from "../canvas-utils.js";
-export const SIZE = Object.freeze({ width: 920, height: 620 });
-const BOARD = { left: 18, top: 18, right: 902, bottom: 602 };
+import { BOARD } from "./layout.js";
 const POINT_HIT_RADIUS = 13;
 const INTERSECTION_HIT_RADIUS = 12;
 const DRAG_THRESHOLD = 6;
@@ -300,43 +300,45 @@ class CompassController {
     this.onWheel = this.handleWheel.bind(this);
     this.onKeyDown = this.handleKeyDown.bind(this);
     this.onResize = () => {
-      resizeCanvasBuffer(
+      const bufferChanged = resizeCanvasBuffer(
         this.canvas,
         this.ctx,
         this.config.width,
         this.config.height,
       );
-      this.updateResponsiveLayout();
-      this.draw();
+      const layoutChanged = this.updateResponsiveLayout();
+      if (bufferChanged || layoutChanged) this.draw();
     };
-    resizeCanvasBuffer(
-      this.canvas,
-      this.ctx,
-      this.config.width,
-      this.config.height,
-    );
-    this.updateResponsiveLayout();
     this.canvas.style.cursor = "grab";
     this.canvas.style.touchAction = "none";
-    this.canvas.addEventListener("pointerdown", this.onPointerDown);
-    this.canvas.addEventListener("pointermove", this.onPointerMove);
-    this.canvas.addEventListener("pointerup", this.onPointerUp);
-    this.canvas.addEventListener("pointercancel", this.onPointerCancel);
-    this.canvas.addEventListener("wheel", this.onWheel, { passive: false });
-    this.canvas.addEventListener("keydown", this.onKeyDown);
-    window.addEventListener("resize", this.onResize);
     this.updateAccessibility();
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.onPointerDown },
+        { type: "pointermove", listener: this.onPointerMove },
+        { type: "pointerup", listener: this.onPointerUp },
+        { type: "pointercancel", listener: this.onPointerCancel },
+        { type: "wheel", listener: this.onWheel, options: { passive: false } },
+        { type: "keydown", listener: this.onKeyDown },
+      ],
+      onResize: this.onResize,
+      onDeactivate: () => {
+        if (this.pointer && this.canvas.hasPointerCapture?.(this.pointer.id)) {
+          this.canvas.releasePointerCapture(this.pointer.id);
+        }
+        this.pointer = null;
+        this.canvas.style.cursor = "grab";
+      },
+    });
+  }
+
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.onPointerDown);
-    this.canvas.removeEventListener("pointermove", this.onPointerMove);
-    this.canvas.removeEventListener("pointerup", this.onPointerUp);
-    this.canvas.removeEventListener("pointercancel", this.onPointerCancel);
-    this.canvas.removeEventListener("wheel", this.onWheel);
-    this.canvas.removeEventListener("keydown", this.onKeyDown);
-    window.removeEventListener("resize", this.onResize);
+    this.lifecycle.destroy();
   }
 
   createInitialCircles() {
@@ -349,6 +351,7 @@ class CompassController {
   }
 
   updateResponsiveLayout() {
+    const previousControlScale = this.controlScale;
     const displayWidth = this.canvas.getBoundingClientRect().width || this.config.width;
     const displayScale = displayWidth / this.config.width;
     this.controlScale = displayWidth < 820
@@ -373,6 +376,7 @@ class CompassController {
       x += widths[index] + gap;
       return button;
     });
+    return Math.abs(previousControlScale - this.controlScale) > 0.001;
   }
 
   handleKeyDown(event) {

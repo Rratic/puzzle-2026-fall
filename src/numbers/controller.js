@@ -1,5 +1,6 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   pointInRect,
   resizeCanvasBuffer,
   roundedRect,
@@ -38,8 +39,9 @@ class NumbersController {
     this.solved = false;
 
     this.handleResize = () => {
-      resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-      this.draw();
+      if (resizeCanvasBuffer(canvas, this.ctx, config.width, config.height)) {
+        this.draw();
+      }
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
     this.handlePointerMove = (event) => this.onPointerMove(event);
@@ -47,23 +49,32 @@ class NumbersController {
     this.handlePointerCancel = () => this.cancelDrag();
 
     this.resetState();
-    resizeCanvasBuffer(canvas, this.ctx, config.width, config.height);
-    canvas.addEventListener("pointerdown", this.handlePointerDown);
-    canvas.addEventListener("pointermove", this.handlePointerMove);
-    canvas.addEventListener("pointerup", this.handlePointerUp);
-    canvas.addEventListener("pointercancel", this.handlePointerCancel);
-    window.addEventListener("resize", this.handleResize);
     this.canvas.style.cursor = "grab";
     this.canvas.setAttribute("aria-label", `只用数字 ${config.digit} 合成 ${config.target}`);
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.handlePointerDown },
+        { type: "pointermove", listener: this.handlePointerMove },
+        { type: "pointerup", listener: this.handlePointerUp },
+        { type: "pointercancel", listener: this.handlePointerCancel },
+      ],
+      onResize: this.handleResize,
+      onDeactivate: () => {
+        if (this.dragPointerId != null) this.releasePointer(this.dragPointerId);
+        this.dragging = null;
+        this.dragPointerId = null;
+        this.canvas.style.cursor = "grab";
+      },
+    });
+  }
+
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerup", this.handlePointerUp);
-    this.canvas.removeEventListener("pointercancel", this.handlePointerCancel);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
     this.canvas.style.removeProperty("cursor");
   }
 

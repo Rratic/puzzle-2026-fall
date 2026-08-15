@@ -1,5 +1,6 @@
 import {
   canvasPointFromEvent,
+  createCanvasLifecycle,
   distance,
   line,
   normalizeAngle,
@@ -44,7 +45,9 @@ class LibraryPackingController {
     this.blockedUntil = 0;
     this.blockedTimer = 0;
     this.solved = false;
-    this.handleTextureLoad = () => this.draw();
+    this.handleTextureLoad = () => {
+      if (this.lifecycle?.active) this.draw();
+    };
     this.boxTexture = null;
     if (config.boxTexture) {
       this.boxTexture = new Image();
@@ -60,42 +63,41 @@ class LibraryPackingController {
       return image;
     });
     this.handleResize = () => {
-      resizeCanvasBuffer(
+      if (resizeCanvasBuffer(
         this.canvas,
         this.ctx,
         this.config.width,
         this.config.height,
-      );
-      this.draw();
+      )) {
+        this.draw();
+      }
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
     this.handlePointerMove = (event) => this.onPointerMove(event);
     this.handlePointerUp = (event) => this.onPointerUp(event);
 
-    resizeCanvasBuffer(
-      this.canvas,
-      this.ctx,
-      this.config.width,
-      this.config.height,
-    );
-    this.bindEvents();
-    this.draw();
+    this.lifecycle = createCanvasLifecycle({
+      canvas,
+      events: [
+        { type: "pointerdown", listener: this.handlePointerDown },
+        { type: "pointermove", listener: this.handlePointerMove },
+        { type: "pointerup", listener: this.handlePointerUp },
+        { type: "pointercancel", listener: this.handlePointerUp },
+      ],
+      onResize: this.handleResize,
+      onDeactivate: () => {
+        this.activeMode = "idle";
+        window.clearTimeout(this.blockedTimer);
+      },
+    });
   }
 
-  bindEvents() {
-    this.canvas.addEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.addEventListener("pointermove", this.handlePointerMove);
-    this.canvas.addEventListener("pointerup", this.handlePointerUp);
-    this.canvas.addEventListener("pointercancel", this.handlePointerUp);
-    window.addEventListener("resize", this.handleResize);
+  setActive(active) {
+    this.lifecycle.setActive(active);
   }
 
   destroy() {
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerup", this.handlePointerUp);
-    this.canvas.removeEventListener("pointercancel", this.handlePointerUp);
-    window.removeEventListener("resize", this.handleResize);
+    this.lifecycle.destroy();
     window.clearTimeout(this.blockedTimer);
     this.boxTexture?.removeEventListener("load", this.handleTextureLoad);
     this.pieceTextures.forEach((image) => {

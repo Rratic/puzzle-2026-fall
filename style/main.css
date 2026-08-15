@@ -265,6 +265,10 @@ h1 {
 	line-height: 1.45;
 }
 
+.canvas-accessory:empty {
+	display: none;
+}
+
 .level-actions {
 	display: flex;
 	align-items: center;

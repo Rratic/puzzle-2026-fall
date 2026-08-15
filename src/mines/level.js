@@ -13,6 +13,7 @@ const minesLevel = {
       caption: "点击揭开，长按或右键插旗；点击已揭开的数字展开相邻格。",
       width: 784,
       height: 560,
+      accessibility: { role: "application", focusable: true },
       mapSrc: new URL("./mines.json", import.meta.url),
       createController: createMinesweeperController,
     }),
