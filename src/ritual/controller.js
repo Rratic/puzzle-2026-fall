@@ -276,13 +276,17 @@ class RitualController {
     const ctx = this.ctx;
     const center = ritualCenter(this.config.width);
     ctx.save();
-    ctx.strokeStyle = progress > 0 ? "rgba(46, 116, 93, 0.42)" : "#d7d9d2";
-    ctx.lineWidth = 1.25 + progress;
+    ctx.strokeStyle = progress > 0 ? "rgba(132, 91, 151, 0.58)" : "#c9afd3";
+    ctx.lineWidth = 1.4 + progress * 0.6;
+    ctx.setLineDash([7, 8]);
     [54, INNER_RADIUS, OUTER_RADIUS].forEach((radius) => {
       ctx.beginPath();
       ctx.arc(center.x, center.y, radius, 0, TAU);
       ctx.stroke();
     });
+    ctx.setLineDash([]);
+    ctx.strokeStyle = progress > 0 ? "rgba(132, 91, 151, 0.32)" : "#e2d5e7";
+    ctx.lineWidth = 1;
     for (let sector = 0; sector < 7; sector += 1) {
       const angle = -Math.PI / 2 + (sector / 7) * TAU;
       ctx.beginPath();
