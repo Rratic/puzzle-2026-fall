@@ -1,4 +1,4 @@
-import { canvasBlock, textBlock } from "../level-blocks.js";
+import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
 import { createPolynomialInputController } from "./controller.js";
 import { QUESTIONS } from "./questions.js";
 
@@ -31,6 +31,7 @@ const knotsLevel = {
     quiz("8 字结", QUESTIONS.figureEight),
     quiz("五叶结", QUESTIONS.cinquefoil),
     textBlock(new URL("./content/complete.md", import.meta.url)),
+    actionsBlock([{ label: "进入地下法阵", target: "ritual" }]),
   ],
 };
 
