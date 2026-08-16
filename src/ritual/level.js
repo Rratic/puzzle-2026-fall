@@ -1,4 +1,4 @@
-import { canvasBlock, textBlock } from "../level-blocks.js";
+import { actionsBlock, canvasBlock, textBlock } from "../level-blocks.js";
 import { createRitualController } from "./controller.js";
 
 const SIZE = Object.freeze({ width: 960, height: 760 });
@@ -17,9 +17,11 @@ const ritualLevel = {
       width: SIZE.width,
       height: SIZE.height,
       accessibility: { role: "application", focusable: true },
+      revealDelayMs: 2400,
       createController: createRitualController,
     }),
     textBlock(new URL("./content/complete.md", import.meta.url), { math: true }),
+    actionsBlock([{ label: "查看行动结算", target: "results" }]),
   ],
 };
 

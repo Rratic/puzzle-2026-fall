@@ -1,4 +1,4 @@
-const BLOCK_TYPES = new Set(["text", "canvas", "actions"]);
+const BLOCK_TYPES = new Set(["text", "canvas", "component", "actions"]);
 
 export function textBlock(src, options = {}) {
   return { ...options, type: "text", src };
@@ -6,6 +6,10 @@ export function textBlock(src, options = {}) {
 
 export function canvasBlock(options) {
   return { ...options, type: "canvas" };
+}
+
+export function componentBlock(options) {
+  return { ...options, type: "component" };
 }
 
 export function actionsBlock(actions) {
@@ -59,6 +63,9 @@ function validateBlock(levelId, block, index, knownLevels) {
     if (typeof block.createController !== "function") {
       throw new TypeError(`${location} must provide createController().`);
     }
+  }
+  if (block.type === "component" && typeof block.createController !== "function") {
+    throw new TypeError(`${location} must provide createController().`);
   }
   if (block.type === "actions") {
     if (!Array.isArray(block.actions)) {

@@ -1,18 +1,19 @@
 const levels = [
   level("corridor", () => import("./corridor/level.js")),
-  level("library", () => import("./library/level.js")),
-  level("mines", () => import("./mines/level.js")),
-  level("maps", () => import("./maps/level.js")),
-  level("hyperbolic", () => import("./hyperbolic/level.js")),
-  level("compass", () => import("./compass/level.js")),
-  level("numbers", () => import("./numbers/level.js")),
-  level("quadratic", () => import("./quadratic/level.js")),
-  level("knots", () => import("./knots/level.js")),
-  level("ritual", () => import("./ritual/level.js")),
+  level("library", () => import("./library/level.js"), "corridor"),
+  level("mines", () => import("./mines/level.js"), "corridor"),
+  level("maps", () => import("./maps/level.js"), "mines"),
+  level("hyperbolic", () => import("./hyperbolic/level.js"), "maps"),
+  level("compass", () => import("./compass/level.js"), "hyperbolic"),
+  level("numbers", () => import("./numbers/level.js"), "maps"),
+  level("quadratic", () => import("./quadratic/level.js"), "numbers"),
+  level("knots", () => import("./knots/level.js"), "maps"),
+  level("ritual", () => import("./ritual/level.js"), "knots"),
+  level("results", () => import("./results/level.js"), "ritual"),
 ];
 
-function level(id, load) {
-  return Object.freeze({ id, load });
+function level(id, load, back = null) {
+  return Object.freeze({ id, load, back });
 }
 
 export default levels;

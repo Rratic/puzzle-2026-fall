@@ -40,7 +40,6 @@ class RitualController {
     this.phaseRegions = [];
     this.controlScale = 1;
     this.solved = false;
-    this.completionNotified = false;
     this.animationFrame = 0;
     this.animationStartedAt = 0;
     this.animationDuration = 2400;
@@ -78,7 +77,6 @@ class RitualController {
         this.animationFrame = 0;
         this.hoveredRegion = -1;
         this.canvas.style.cursor = "default";
-        if (this.solved) this.finishCompletion();
       },
     });
     this.updateAccessibility();
@@ -168,9 +166,9 @@ class RitualController {
         ? 0
         : 2400;
       this.updateAccessibility();
+      this.onSolved({ revealDelayMs: this.animationDuration });
       if (this.animationDuration === 0) {
         this.draw(this.animationStartedAt);
-        this.finishCompletion();
       } else {
         this.startCompletionAnimation();
       }
@@ -189,16 +187,9 @@ class RitualController {
       } else {
         this.animationFrame = 0;
         this.draw(this.animationStartedAt + this.animationDuration);
-        this.finishCompletion();
       }
     };
     this.animationFrame = window.requestAnimationFrame(tick);
-  }
-
-  finishCompletion() {
-    if (this.completionNotified) return;
-    this.completionNotified = true;
-    this.onSolved();
   }
 
   eventPoint(event) {

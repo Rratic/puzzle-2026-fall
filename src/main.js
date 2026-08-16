@@ -1,10 +1,17 @@
 import levelEntries from "./levels.js";
 import { validateLevel } from "./level-blocks.js";
+import { ENABLE_CONSOLE_COMPLETION } from "./debug-config.js";
+import {
+  getProgressSummary,
+  recordLevelCompletion,
+} from "./progress.js";
 
-const STORAGE_KEY = "project-111:level-times";
 const LEVELS = levelEntries.filter(Boolean);
 const levelsById = new Map(LEVELS.map((entry) => [entry.id, entry]));
 const levelContent = document.querySelector("#level-content");
+const levelNavigation = document.querySelector("#level-navigation");
+const routeBack = document.querySelector("#route-back");
+const postgameReturn = document.querySelector("#postgame-return");
 
 let activeSession = null;
 let renderRequestId = 0;
@@ -21,22 +28,6 @@ const MATH_OPTIONS = {
   ],
   throwOnError: false,
 };
-
-function readRecords() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
-
-function writeRecords(records) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  } catch (error) {
-    console.error("Unable to persist level records.", error);
-  }
-}
 
 function getLevelEntryFromHash() {
   const id = decodeURIComponent(location.hash.replace(/^#/, ""));
@@ -244,7 +235,12 @@ function renderCanvasBlock(session, config, blockIndex) {
         config,
         canvas,
         mount: accessory,
-        onSolved: () => markCanvasSolved(session, canvasIndex, state),
+        onSolved: (options = {}) => markCanvasSolved(
+          session,
+          canvasIndex,
+          state,
+          options.revealDelayMs ?? config.revealDelayMs ?? 0,
+        ),
       });
       if (
         !candidate ||
@@ -275,6 +271,7 @@ function renderCanvasBlock(session, config, blockIndex) {
     if (!isExpanded) {
       if (controller) controller.setActive(true);
       else initialize();
+      if (controller) startCanvasTimer(session, canvasIndex);
       if (!session.canvasState[canvasIndex]) {
         scrollToBlock(panel);
       }
@@ -311,9 +308,30 @@ function renderActionsBlock(block) {
   return { block, element: panel, destroy() {} };
 }
 
+function renderComponentBlock(config) {
+  const panel = document.createElement("section");
+  panel.className = config.className || "story-panel";
+  const mount = document.createElement("div");
+  mount.className = "component-host";
+  panel.append(mount);
+  const controller = config.createController({ config, mount });
+  if (!controller || typeof controller.destroy !== "function") {
+    controller?.destroy?.();
+    throw new TypeError("Component controller must provide destroy().");
+  }
+  return {
+    block: config,
+    element: panel,
+    destroy() {
+      controller.destroy();
+    },
+  };
+}
+
 function renderBlock(session, block, blockIndex) {
   if (block.type === "text") return renderRichTextBlock(session, block);
   if (block.type === "canvas") return renderCanvasBlock(session, block, blockIndex);
+  if (block.type === "component") return renderComponentBlock(block);
   if (block.type === "actions") return renderActionsBlock(block);
   throw new Error(`Unknown level block type: "${block.type}".`);
 }
@@ -321,33 +339,49 @@ function renderBlock(session, block, blockIndex) {
 function completeLevel(session) {
   if (session.destroyed || session.isComplete) return false;
   session.isComplete = true;
-  const elapsedMs = performance.now() - session.startedAt;
-  const records = readRecords();
-  const current = records[session.level.id] || {};
-  const previousCompletions = current.completions ?? current.attempts ?? 0;
-  records[session.level.id] = {
-    completions: previousCompletions + 1,
-    bestMs: current.bestMs == null ? elapsedMs : Math.min(current.bestMs, elapsedMs),
-    lastMs: elapsedMs,
-    completedAt: new Date().toISOString(),
-  };
-  writeRecords(records);
+  const canvasMs = session.canvasTiming.map((timing) => timing.elapsedMs || 0);
+  const elapsedMs = canvasMs.reduce((total, duration) => total + duration, 0);
+  recordLevelCompletion(session.level.id, elapsedMs, canvasMs);
+  updateLevelNavigation(levelsById.get(session.level.id));
   return true;
 }
 
-function markCanvasSolved(session, canvasIndex, badge) {
+function startCanvasTimer(session, canvasIndex) {
+  const timing = session.canvasTiming[canvasIndex];
+  if (timing && timing.startedAt == null && timing.elapsedMs == null) {
+    timing.startedAt = performance.now();
+  }
+}
+
+function finishCanvasTimer(session, canvasIndex) {
+  const timing = session.canvasTiming[canvasIndex];
+  if (!timing || timing.elapsedMs != null) return;
+  timing.elapsedMs = timing.startedAt == null
+    ? 0
+    : performance.now() - timing.startedAt;
+}
+
+function markCanvasSolved(session, canvasIndex, badge, revealDelayMs = 0) {
   if (session !== activeSession || session.destroyed || session.canvasState[canvasIndex]) {
     return;
   }
+  finishCanvasTimer(session, canvasIndex);
   session.canvasState[canvasIndex] = true;
   badge.classList.add("is-solved");
   badge.setAttribute("aria-label", "已完成");
-  const newlyVisible = updateBlockVisibility(session);
   if (session.canvasState.every(Boolean)) {
     completeLevel(session);
   }
-  if (newlyVisible.length > 0) {
-    scrollToBlock(newlyVisible[0]);
+  const reveal = () => {
+    if (session !== activeSession || session.destroyed) return;
+    const newlyVisible = updateBlockVisibility(session);
+    if (newlyVisible.length > 0) scrollToBlock(newlyVisible[0]);
+  };
+  if (revealDelayMs > 0) {
+    const timer = window.setTimeout(reveal, revealDelayMs);
+    session.revealTimers.push(timer);
+  } else {
+    reveal();
   }
 }
 
@@ -363,6 +397,8 @@ function destroyController(controller) {
 function destroySession(session) {
   if (!session || session.destroyed) return;
   session.destroyed = true;
+  session.revealTimers.forEach((timer) => window.clearTimeout(timer));
+  session.revealTimers = [];
   session.renderedBlocks.forEach((block) => {
     try {
       block.destroy();
@@ -403,12 +439,16 @@ async function renderLevel(entry) {
 
   const session = {
     level,
-    startedAt: performance.now(),
     isComplete: false,
     destroyed: false,
     canvasState: Array(level.blocks.filter((block) => block.type === "canvas").length).fill(false),
+    canvasTiming: Array.from(
+      { length: level.blocks.filter((block) => block.type === "canvas").length },
+      () => ({ startedAt: null, elapsedMs: null }),
+    ),
     canvasBadges: [],
     renderedBlocks: [],
+    revealTimers: [],
   };
   try {
     level.blocks.forEach((block, index) => {
@@ -424,6 +464,34 @@ async function renderLevel(entry) {
   activeSession = session;
   levelContent.replaceChildren(...session.renderedBlocks.map(({ element }) => element));
   updateBlockVisibility(session);
+  updateLevelNavigation(entry);
+}
+
+function updateLevelNavigation(entry) {
+  if (!levelNavigation || !routeBack || !postgameReturn) return;
+  const showBack = Boolean(entry?.back);
+  routeBack.hidden = !showBack;
+  if (showBack) routeBack.href = `#${encodeURIComponent(entry.back)}`;
+  const showResults = getProgressSummary().cleared &&
+    entry?.id !== "results";
+  postgameReturn.hidden = !showResults;
+  levelNavigation.hidden = !showBack && !showResults;
+}
+
+function completeCurrentLevelFromConsole() {
+  const session = activeSession;
+  if (!session || session.destroyed) return null;
+  session.canvasState.forEach((solved, index) => {
+    if (solved) return;
+    finishCanvasTimer(session, index);
+    session.canvasState[index] = true;
+    const badge = session.canvasBadges[index];
+    badge?.classList.add("is-solved");
+    badge?.setAttribute("aria-label", "已完成");
+  });
+  completeLevel(session);
+  updateBlockVisibility(session);
+  return { id: session.level.id, completed: true };
 }
 
 function handleRouteChange() {
@@ -437,4 +505,7 @@ function handleRouteChange() {
 }
 
 window.addEventListener("hashchange", handleRouteChange);
+if (ENABLE_CONSOLE_COMPLETION) {
+  window.completeCurrentLevel = completeCurrentLevelFromConsole;
+}
 handleRouteChange();
