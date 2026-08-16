@@ -9,7 +9,7 @@ export const PUZZLE_LEVELS = Object.freeze([
   Object.freeze({ id: "numbers", label: "凑数字" }),
   Object.freeze({ id: "quadratic", label: "二次曲线作图" }),
   Object.freeze({ id: "knots", label: "扭结不变量" }),
-  Object.freeze({ id: "ritual", label: "Hoffman–Singleton 法阵" }),
+  Object.freeze({ id: "ritual", label: "正则图" }),
 ]);
 
 const CLEAR_ROUTES = Object.freeze([
