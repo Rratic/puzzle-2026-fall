@@ -1,4 +1,4 @@
-const STORAGE_KEY = "project-111:level-times";
+const STORAGE_KEY = "progress";
 
 export const PUZZLE_LEVELS = Object.freeze([
   Object.freeze({ id: "library", label: "书架" }),
