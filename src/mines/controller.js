@@ -5,7 +5,6 @@ import {
 } from "../canvas-utils.js";
 
 const CELL_SIZE = 28;
-const MAX_MAP_SIZE = 100;
 const MINE_MAP_CELL = Object.freeze({
   unused: 0,
   hidden: 1,
@@ -96,7 +95,7 @@ class MinesweeperLogicController {
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-      const mapData = parseMineMapFile(await response.json());
+      const mapData = createMineMap(await response.json());
       if (this.destroyed) {
         return;
       }
@@ -106,12 +105,6 @@ class MinesweeperLogicController {
         rows: mapData.height,
         cellSize: CELL_SIZE,
       };
-      if (
-        this.board.columns * this.board.cellSize !== this.config.width ||
-        this.board.rows * this.board.cellSize !== this.config.height
-      ) {
-        throw new Error("地图尺寸与画布尺寸不一致");
-      }
       this.ready = true;
       this.resetBoard();
       this.updateStatus();
@@ -614,41 +607,13 @@ function createBoard(mapData) {
   return cells;
 }
 
-function parseMineMapFile(value) {
-  if (!value || value.type !== "project-111/mines-map" || value.version !== 1) {
-    throw new Error("不是可识别的扫雷地图文件。");
-  }
-  if (!Array.isArray(value.rows) || value.rows.length === 0) {
-    throw new Error("地图没有有效行。");
-  }
-
-  const width = Number(value.width);
-  const height = Number(value.height);
-  if (
-    !Number.isInteger(width) ||
-    !Number.isInteger(height) ||
-    width < 1 ||
-    height < 1 ||
-    width > MAX_MAP_SIZE ||
-    height > MAX_MAP_SIZE ||
-    value.rows.length !== height
-  ) {
-    throw new Error("地图尺寸无效。");
-  }
-
-  const cells = new Uint8Array(width * height);
-  value.rows.forEach((row, y) => {
-    if (typeof row !== "string" || row.length !== width) {
-      throw new Error(`第 ${y + 1} 行的宽度不正确。`);
-    }
-    Array.from(row).forEach((symbol, x) => {
-      if (!(symbol in SYMBOL_TO_CELL)) {
-        throw new Error(`地图包含未知符号“${symbol}”。`);
-      }
-      cells[y * width + x] = SYMBOL_TO_CELL[symbol];
-    });
-  });
-
+function createMineMap(value) {
+  const height = value.rows.length;
+  const width = value.rows[0].length;
+  const cells = Uint8Array.from(
+    value.rows.join(""),
+    (symbol) => SYMBOL_TO_CELL[symbol],
+  );
   return { width, height, cells };
 }
 
