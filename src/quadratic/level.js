@@ -30,7 +30,7 @@ const quadraticLevel = {
       targetX: Math.cos(Math.PI / 9),
     }),
     textBlock(new URL("./content/complete.md", import.meta.url)),
-    actionsBlock([{ label: "进入新房间", target: "knots" }]),
+    actionsBlock([{ label: "进入新房间", target: "ritual" }]),
   ],
 };
 

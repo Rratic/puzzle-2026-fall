@@ -23,6 +23,7 @@ const mapsLevel = {
     textBlock(new URL("./content/complete.md", import.meta.url)),
     actionsBlock([
       { label: "选择左侧", target: "hyperbolic" },
+      { label: "选择中间", target: "knots" },
       { label: "选择右侧", target: "numbers" },
     ]),
   ],

@@ -13,10 +13,12 @@ export const PUZZLE_LEVELS = Object.freeze([
 ]);
 
 const CLEAR_ROUTES = Object.freeze([
-  Object.freeze(["library", "maps", "hyperbolic", "compass", "knots", "ritual"]),
-  Object.freeze(["mines", "maps", "hyperbolic", "compass", "knots", "ritual"]),
-  Object.freeze(["library", "maps", "numbers", "quadratic", "knots", "ritual"]),
-  Object.freeze(["mines", "maps", "numbers", "quadratic", "knots", "ritual"]),
+  Object.freeze(["library", "maps", "hyperbolic", "compass", "ritual"]),
+  Object.freeze(["mines", "maps", "hyperbolic", "compass", "ritual"]),
+  Object.freeze(["library", "maps", "knots", "ritual"]),
+  Object.freeze(["mines", "maps", "knots", "ritual"]),
+  Object.freeze(["library", "maps", "numbers", "quadratic", "ritual"]),
+  Object.freeze(["mines", "maps", "numbers", "quadratic", "ritual"]),
 ]);
 
 const PREREQUISITES = Object.freeze({
@@ -24,7 +26,7 @@ const PREREQUISITES = Object.freeze({
   compass: ["hyperbolic"],
   numbers: ["maps"],
   quadratic: ["numbers"],
-  ritual: ["knots"],
+  knots: ["maps"],
 });
 
 export function readProgressRecords() {
@@ -69,9 +71,11 @@ export function getProgressSummary(records = readProgressRecords()) {
       level.available = false;
       return;
     }
-    if (level.id === "knots") {
+    if (level.id === "ritual") {
       level.available = Boolean(
-        completedById.get("compass") || completedById.get("quadratic"),
+        completedById.get("compass") ||
+        completedById.get("knots") ||
+        completedById.get("quadratic"),
       );
       return;
     }

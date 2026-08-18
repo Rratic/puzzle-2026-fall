@@ -8,7 +8,7 @@ const levels = [
   level("numbers", () => import("./numbers/level.js"), "maps"),
   level("quadratic", () => import("./quadratic/level.js"), "numbers"),
   level("knots", () => import("./knots/level.js"), "maps"),
-  level("ritual", () => import("./ritual/level.js"), "knots"),
+  level("ritual", () => import("./ritual/level.js"), "maps"),
   level("results", () => import("./results/level.js"), "ritual"),
 ];
 

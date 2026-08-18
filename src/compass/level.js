@@ -34,7 +34,7 @@ const compassLevel = {
     textBlock(new URL("./content/line-line.md", import.meta.url)),
     puzzle("直线与直线交点", PUZZLES.lineLine),
     textBlock(new URL("./content/complete.md", import.meta.url)),
-    actionsBlock([{ label: "进入新房间", target: "knots" }]),
+    actionsBlock([{ label: "进入新房间", target: "ritual" }]),
   ],
 };
 
