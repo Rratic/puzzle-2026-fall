@@ -3,6 +3,9 @@ import {
   getProgressSummary,
 } from "../progress.js";
 
+const STAMP_URL = new URL("../../assets/stamp.png", import.meta.url);
+let stampImagePromise = null;
+
 export function createResultsController({ mount }) {
   return new ResultsController(mount);
 }
@@ -19,7 +22,6 @@ class ResultsController {
   build() {
     this.mount.classList.add("results-view");
     const header = element("header", "results-header");
-    const kicker = element("div", "level-kicker", "识数鸡寻踪");
     const title = element("h1", "results-title", "行动结算");
     const status = element(
       "p",
@@ -27,10 +29,10 @@ class ResultsController {
       this.summary.allCompleted
         ? "全部谜题已经完成。"
         : this.summary.cleared
-          ? "主路线已经通关，可以继续补完其余谜题。"
-          : "尚未完成一条通往法阵的路线。",
+          ? "已通关一条路线，可继续补完其余谜题。"
+          : "尚未完成一条路线。",
     );
-    header.append(kicker, title, status);
+    header.append(title, status);
 
     const metrics = element("div", "results-metrics");
     metrics.append(
@@ -108,7 +110,7 @@ class ResultsController {
     if (!nickname) return;
     this.setBusy(true);
     try {
-      const canvas = drawResultImage(this.summary, nickname);
+      const canvas = await drawResultImage(this.summary, nickname);
       const blob = await canvasBlob(canvas, "image/png");
       downloadBlob(blob, `${safeFilename(nickname)}-行动结算.png`);
       this.showFeedback("图片已生成。", false);
@@ -125,7 +127,7 @@ class ResultsController {
     if (!nickname) return;
     this.setBusy(true);
     try {
-      const certificate = drawCertificate(this.summary, nickname);
+      const certificate = await drawCertificate(this.summary, nickname);
       const jpeg = await canvasBlob(certificate, "image/jpeg", 0.94);
       const pdf = createImagePdf(
         new Uint8Array(await jpeg.arrayBuffer()),
@@ -153,7 +155,8 @@ class ResultsController {
   }
 }
 
-function drawResultImage(summary, nickname) {
+async function drawResultImage(summary, nickname) {
+  const stamp = await loadStampImage();
   const canvas = document.createElement("canvas");
   canvas.width = 1200;
   canvas.height = 675;
@@ -191,7 +194,7 @@ function drawResultImage(summary, nickname) {
   drawImageMetric(
     ctx,
     "全部完成时长",
-    summary.allMs == null ? "尚未全部完成" : formatDuration(summary.allMs),
+    summary.allMs == null ? "--" : formatDuration(summary.allMs),
     92,
     477,
   );
@@ -202,10 +205,8 @@ function drawResultImage(summary, nickname) {
     690,
     354,
   );
+  ctx.drawImage(stamp, 950, 430, 200, 200);
 
-  ctx.fillStyle = "#66706d";
-  ctx.font = "500 22px system-ui, sans-serif";
-  ctx.fillText("Hoffman–Singleton 地下法阵调查记录", 92, 612);
   return canvas;
 }
 
@@ -218,7 +219,8 @@ function drawImageMetric(ctx, label, value, x, y) {
   ctx.fillText(value, x, y + 52);
 }
 
-function drawCertificate(summary, nickname) {
+async function drawCertificate(summary, nickname) {
+  const stamp = await loadStampImage();
   const canvas = document.createElement("canvas");
   canvas.width = 1684;
   canvas.height = 1190;
@@ -231,37 +233,113 @@ function drawCertificate(summary, nickname) {
   ctx.strokeStyle = "#b98b20";
   ctx.lineWidth = 3;
   ctx.strokeRect(68, 68, canvas.width - 136, canvas.height - 136);
+  drawCertificateCorners(ctx, canvas.width, canvas.height);
+  drawCertificateRule(ctx, 180, canvas.width - 180, 286);
 
-  ctx.textAlign = "center";
+  const mainColumnX = 180;
+  const dividerX = 1000;
+  ctx.textAlign = "left";
   ctx.fillStyle = "#2f7278";
   ctx.font = "700 34px system-ui, sans-serif";
-  ctx.fillText("识数鸡寻踪", canvas.width / 2, 220);
-  ctx.fillStyle = "#202725";
-  ctx.font = "700 76px system-ui, sans-serif";
-  ctx.fillText("地下法阵调查证书", canvas.width / 2, 350);
+  ctx.fillText("识数鸡寻踪", mainColumnX, 220);
 
   ctx.fillStyle = "#96546a";
-  drawFittedText(ctx, nickname, canvas.width / 2, 570, 1240, 72, true);
+  drawFittedText(ctx, nickname, mainColumnX, 500, 700, 72);
+  ctx.strokeStyle = "#d6bd75";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(mainColumnX, 540);
+  ctx.lineTo(860, 540);
+  ctx.stroke();
+
   ctx.fillStyle = "#202725";
   ctx.font = "700 62px system-ui, sans-serif";
-  ctx.fillText(summary.allCompleted ? "已全部完成" : "已通关", canvas.width / 2, 750);
+  ctx.fillText(summary.allCompleted ? "全部完成" : "已通关", mainColumnX, 680);
+  drawCertificateRule(ctx, mainColumnX, 860, 750, 520);
 
-  ctx.strokeStyle = "#b98b20";
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = "#d6bd75";
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(canvas.width / 2, 930, 88, 0, Math.PI * 2);
+  ctx.moveTo(dividerX, 360);
+  ctx.lineTo(dividerX, 850);
   ctx.stroke();
-  ctx.beginPath();
-  for (let index = 0; index < 7; index += 1) {
-    const angle = -Math.PI / 2 + (index / 7) * Math.PI * 2;
-    const x = canvas.width / 2 + Math.cos(angle) * 58;
-    const y = 930 + Math.sin(angle) * 58;
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
-  ctx.stroke();
+
+  drawStampBacking(ctx, 1280, 620);
+  ctx.drawImage(stamp, 1180, 520, 200, 200);
   return canvas;
+}
+
+function drawCertificateCorners(ctx, width, height) {
+  const inset = 112;
+  const length = 52;
+  const color = "#b98b20";
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 3;
+  for (const [x, y, directionX, directionY] of [
+    [inset, inset, 1, 1],
+    [width - inset, inset, -1, 1],
+    [inset, height - inset, 1, -1],
+    [width - inset, height - inset, -1, -1],
+  ]) {
+    ctx.beginPath();
+    ctx.moveTo(x, y + directionY * length);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + directionX * length, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x + directionX * 10, y + directionY * 10, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawCertificateRule(ctx, startX, endX, y, diamondX = (startX + endX) / 2) {
+  ctx.save();
+  ctx.strokeStyle = "#b98b20";
+  ctx.fillStyle = "#b98b20";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(startX, y);
+  ctx.lineTo(diamondX - 24, y);
+  ctx.moveTo(diamondX + 24, y);
+  ctx.lineTo(endX, y);
+  ctx.stroke();
+  ctx.translate(diamondX, y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillRect(-8, -8, 16, 16);
+  ctx.restore();
+}
+
+function drawStampBacking(ctx, centerX, centerY) {
+  ctx.save();
+  ctx.strokeStyle = "#b98b20";
+  ctx.lineWidth = 4;
+  ctx.setLineDash([5, 9]);
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 112, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 106, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function loadStampImage() {
+  if (!stampImagePromise) {
+    stampImagePromise = new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener("load", () => resolve(image), { once: true });
+      image.addEventListener("error", () => reject(new Error("印章图片加载失败。")), {
+        once: true,
+      });
+      image.src = STAMP_URL.href;
+    });
+  }
+  return stampImagePromise;
 }
 
 function createImagePdf(jpegBytes, imageWidth, imageHeight) {
