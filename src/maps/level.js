@@ -22,8 +22,8 @@ const mapsLevel = {
     }),
     textBlock(new URL("./content/complete.md", import.meta.url)),
     actionsBlock([
-      { label: "进入弯曲回廊", target: "hyperbolic" },
-      { label: "检查算术控制室", target: "numbers" },
+      { label: "选择左侧", target: "hyperbolic" },
+      { label: "选择右侧", target: "numbers" },
     ]),
   ],
 };

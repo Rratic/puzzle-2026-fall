@@ -7,18 +7,18 @@ const hyperbolicLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      title: "双曲圆盘",
+      title: "双曲空间",
     }),
     canvasBlock({
       title: "寻找双曲圆心",
-      caption: "点击相邻七边形移动；拖动画面选择移动方向。",
+      caption: "点击相邻的地砖进行移动。",
       width: VIEWPORT.width,
       height: VIEWPORT.height,
       accessibility: { role: "application", focusable: false },
       createController: createHyperbolicController,
     }),
     textBlock(new URL("./content/complete.md", import.meta.url)),
-    actionsBlock([{ label: "进入单规室", target: "compass" }]),
+    actionsBlock([{ label: "进入新房间", target: "compass" }]),
   ],
 };
 

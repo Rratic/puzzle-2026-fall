@@ -53,8 +53,6 @@ class HyperbolicController {
     this.solved = false;
     this.animating = false;
     this.animationFrame = 0;
-    this.drag = null;
-    this.dragOffset = { x: 0, y: 0 };
     this.visibleIds = new Set();
 
     this.handleResize = () => {
@@ -68,18 +66,12 @@ class HyperbolicController {
       }
     };
     this.handlePointerDown = (event) => this.onPointerDown(event);
-    this.handlePointerMove = (event) => this.onPointerMove(event);
-    this.handlePointerUp = (event) => this.onPointerUp(event);
-    this.handlePointerCancel = (event) => this.onPointerCancel(event);
 
     this.refreshVisibility();
     this.lifecycle = createCanvasLifecycle({
       canvas,
       events: [
         { type: "pointerdown", listener: this.handlePointerDown },
-        { type: "pointermove", listener: this.handlePointerMove },
-        { type: "pointerup", listener: this.handlePointerUp },
-        { type: "pointercancel", listener: this.handlePointerCancel },
       ],
       onResize: this.handleResize,
       onDeactivate: () => {
@@ -90,8 +82,6 @@ class HyperbolicController {
           this.animating = false;
           this.refreshVisibility();
         }
-        this.drag = null;
-        this.dragOffset = { x: 0, y: 0 };
       },
     });
   }
@@ -124,7 +114,7 @@ class HyperbolicController {
   }
 
   onPointerDown(event) {
-    if (this.solved || this.animating) {
+    if (event.button !== 0 || this.solved || this.animating) {
       return;
     }
 
@@ -135,68 +125,7 @@ class HyperbolicController {
       this.config.width,
       this.config.height,
     );
-    this.drag = {
-      pointerId: event.pointerId,
-      start: point,
-    };
-    this.canvas.setPointerCapture?.(event.pointerId);
-  }
-
-  onPointerMove(event) {
-    if (!this.drag || event.pointerId !== this.drag.pointerId || this.animating) {
-      return;
-    }
-
-    event.preventDefault();
-    const point = canvasPointFromEvent(
-      this.canvas,
-      event,
-      this.config.width,
-      this.config.height,
-    );
-    const dx = point.x - this.drag.start.x;
-    const dy = point.y - this.drag.start.y;
-    const length = Math.hypot(dx, dy);
-    const scale = length > 34 ? 34 / length : 1;
-    this.dragOffset = { x: dx * scale, y: dy * scale };
-    this.draw();
-  }
-
-  onPointerUp(event) {
-    if (!this.drag || event.pointerId !== this.drag.pointerId) {
-      return;
-    }
-
-    event.preventDefault();
-    const point = canvasPointFromEvent(
-      this.canvas,
-      event,
-      this.config.width,
-      this.config.height,
-    );
-    const dx = point.x - this.drag.start.x;
-    const dy = point.y - this.drag.start.y;
-    const distance = Math.hypot(dx, dy);
-    this.canvas.releasePointerCapture?.(event.pointerId);
-    this.drag = null;
-    this.dragOffset = { x: 0, y: 0 };
-
-    if (distance >= 24) {
-      this.moveTowardScreenDirection(-dx, -dy);
-      return;
-    }
-
     this.activateAt(point);
-  }
-
-  onPointerCancel(event) {
-    if (!this.drag || event.pointerId !== this.drag.pointerId) {
-      return;
-    }
-    this.canvas.releasePointerCapture?.(event.pointerId);
-    this.drag = null;
-    this.dragOffset = { x: 0, y: 0 };
-    this.draw();
   }
 
   activateAt(point) {
@@ -229,33 +158,9 @@ class HyperbolicController {
     }
   }
 
-  moveTowardScreenDirection(x, y) {
-    let bestId = null;
-    let bestScore = -Infinity;
-    const length = Math.hypot(x, y) || 1;
-    for (const neighborId of this.world.tiles[this.currentId].neighbors) {
-      if (!this.canEnterTile(neighborId)) {
-        continue;
-      }
-      const center = this.projectTileCenter(neighborId);
-      const vx = center.x - DISK.x;
-      const vy = center.y - DISK.y;
-      const vectorLength = Math.hypot(vx, vy) || 1;
-      const score = (vx * x + vy * y) / (vectorLength * length);
-      if (score > bestScore) {
-        bestScore = score;
-        bestId = neighborId;
-      }
-    }
-
-    if (bestId != null) {
-      this.moveTo(bestId);
-    }
-  }
-
   projectTileCenter(tileId) {
     const transformed = diskTransform(this.world.tiles[tileId].center, this.camera);
-    return toCanvasPoint(transformed, this.dragOffset);
+    return toCanvasPoint(transformed);
   }
 
   canEnterTile(tileId) {
@@ -358,8 +263,8 @@ class HyperbolicController {
       return;
     }
 
-    const center = toCanvasPoint(transformedCenter, this.dragOffset);
-    const path = createGeodesicPolygonPath(transformedVertices, this.dragOffset);
+    const center = toCanvasPoint(transformedCenter);
+    const path = createGeodesicPolygonPath(transformedVertices);
     const targetDistance = this.targetDistances[tile.id];
 
     let fill = usesDarkTileColor(tile.id) ? COLORS.tileDark : COLORS.tile;
@@ -402,11 +307,11 @@ class HyperbolicController {
   drawSightBoundary() {
     const ctx = this.ctx;
     const gradient = ctx.createRadialGradient(
-      DISK.x + this.dragOffset.x,
-      DISK.y + this.dragOffset.y,
+      DISK.x,
+      DISK.y,
       DISK.radius * 0.64,
-      DISK.x + this.dragOffset.x,
-      DISK.y + this.dragOffset.y,
+      DISK.x,
+      DISK.y,
       DISK.radius,
     );
     gradient.addColorStop(0, "rgba(19, 29, 33, 0)");
@@ -1099,9 +1004,9 @@ function diskGeodesicInterpolate(from, to, amount) {
   return diskInverseTransform(scaled, from);
 }
 
-function createGeodesicPolygonPath(vertices, offset) {
+function createGeodesicPolygonPath(vertices) {
   const path = new Path2D();
-  const first = toCanvasPoint(vertices[0], offset);
+  const first = toCanvasPoint(vertices[0]);
   path.moveTo(first.x, first.y);
 
   for (let index = 0; index < vertices.length; index += 1) {
@@ -1109,7 +1014,7 @@ function createGeodesicPolygonPath(vertices, offset) {
     const end = vertices[(index + 1) % vertices.length];
     const geodesic = geodesicThrough(start, end);
     if (geodesic.type === "line" || geodesic.radiusSquared > 1e8) {
-      const endPoint = toCanvasPoint(end, offset);
+      const endPoint = toCanvasPoint(end);
       path.lineTo(endPoint.x, endPoint.y);
       continue;
     }
@@ -1119,8 +1024,8 @@ function createGeodesicPolygonPath(vertices, offset) {
     const endAngle = Math.atan2(end.y - geodesic.cy, end.x - geodesic.cx);
     const delta = normalizeAngle(endAngle - startAngle);
     path.arc(
-      DISK.x + geodesic.cx * DISK.radius + offset.x,
-      DISK.y + geodesic.cy * DISK.radius + offset.y,
+      DISK.x + geodesic.cx * DISK.radius,
+      DISK.y + geodesic.cy * DISK.radius,
       radius * DISK.radius,
       startAngle,
       startAngle + delta,
@@ -1132,10 +1037,10 @@ function createGeodesicPolygonPath(vertices, offset) {
   return path;
 }
 
-function toCanvasPoint(point, offset = { x: 0, y: 0 }) {
+function toCanvasPoint(point) {
   return {
-    x: DISK.x + point.x * DISK.radius + offset.x,
-    y: DISK.y + point.y * DISK.radius + offset.y,
+    x: DISK.x + point.x * DISK.radius,
+    y: DISK.y + point.y * DISK.radius,
   };
 }
 

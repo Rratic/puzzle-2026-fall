@@ -20,7 +20,7 @@ const numbersLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      title: "凑数字",
+      title: "控制室的锁",
     }),
     textBlock(new URL("./content/unary.md", import.meta.url)),
     puzzle("只用 5 得到 24", 5, 24, 2),
