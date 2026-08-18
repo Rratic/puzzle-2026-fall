@@ -8,7 +8,7 @@ const libraryLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      title: "智华楼一楼图书角",
+      title: "一楼图书角",
     }),
     canvasBlock({
       title: "书架",

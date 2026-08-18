@@ -5,7 +5,7 @@ const corridorLevel = {
 	blocks: [
 		textBlock(new URL("./content/intro.md", import.meta.url), {
 			kicker: true,
-			title: "智华楼一楼走廊",
+			title: "一楼走廊",
 		}),
 		actionsBlock([
 			{ label: "前往楼梯间", target: "mines" },
