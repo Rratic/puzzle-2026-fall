@@ -176,6 +176,7 @@ function loadScript(src) {
 
 function renderCanvasBlock(session, config, blockIndex) {
   const canvasIndex = session.canvasBadges.length;
+  const alreadyCompleted = session.canvasState[canvasIndex];
   const panel = document.createElement("section");
   panel.className = "canvas-panel";
 
@@ -191,13 +192,19 @@ function renderCanvasBlock(session, config, blockIndex) {
   title.textContent = config.title;
   const state = document.createElement("span");
   state.className = "canvas-state";
-  state.setAttribute("aria-label", "未完成");
+  state.setAttribute("aria-label", alreadyCompleted ? "已完成" : "未完成");
   state.setAttribute("aria-live", "polite");
+  if (alreadyCompleted) state.classList.add("is-solved");
   session.canvasBadges.push(state);
   const controls = document.createElement("span");
   controls.className = "canvas-controls";
   controls.append(state);
   titleRow.append(title, controls);
+  if (alreadyCompleted) {
+    titleRow.disabled = true;
+    titleRow.classList.add("is-locked");
+    titleRow.setAttribute("aria-disabled", "true");
+  }
 
   const content = document.createElement("div");
   content.className = "canvas-panel-content";
@@ -265,6 +272,7 @@ function renderCanvasBlock(session, config, blockIndex) {
   };
 
   const handleToggle = () => {
+    if (session.canvasState[canvasIndex]) return;
     const isExpanded = titleRow.getAttribute("aria-expanded") === "true";
     titleRow.setAttribute("aria-expanded", String(!isExpanded));
     content.hidden = isExpanded;
@@ -439,7 +447,7 @@ async function renderLevel(entry) {
 
   const session = {
     level,
-    isComplete: false,
+    isComplete: getProgressSummary().levels.find(({ id }) => id === entry.id)?.completed || false,
     destroyed: false,
     canvasState: Array(level.blocks.filter((block) => block.type === "canvas").length).fill(false),
     canvasTiming: Array.from(
@@ -450,6 +458,7 @@ async function renderLevel(entry) {
     renderedBlocks: [],
     revealTimers: [],
   };
+  if (session.isComplete) session.canvasState.fill(true);
   try {
     level.blocks.forEach((block, index) => {
       session.renderedBlocks.push(renderBlock(session, block, index));

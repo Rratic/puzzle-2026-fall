@@ -217,6 +217,10 @@ h1 {
 	transform: rotate(225deg);
 }
 
+.canvas-title-row.is-locked::after {
+	display: none;
+}
+
 .canvas-controls {
 	display: inline-flex;
 	flex: 0 0 auto;

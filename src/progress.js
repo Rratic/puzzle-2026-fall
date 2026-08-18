@@ -1,15 +1,15 @@
 const STORAGE_KEY = "progress";
 
 export const PUZZLE_LEVELS = Object.freeze([
-  Object.freeze({ id: "library", label: "书架" }),
-  Object.freeze({ id: "mines", label: "扫雷" }),
-  Object.freeze({ id: "maps", label: "平面图四染色" }),
-  Object.freeze({ id: "hyperbolic", label: "双曲圆盘" }),
-  Object.freeze({ id: "compass", label: "单规作图" }),
-  Object.freeze({ id: "numbers", label: "凑数字" }),
-  Object.freeze({ id: "quadratic", label: "二次曲线作图" }),
-  Object.freeze({ id: "knots", label: "扭结不变量" }),
-  Object.freeze({ id: "ritual", label: "正则图" }),
+  Object.freeze({ id: "library", label: "一楼图书角" }),
+  Object.freeze({ id: "mines", label: "机关区" }),
+  Object.freeze({ id: "maps", label: "深层楼梯间" }),
+  Object.freeze({ id: "hyperbolic", label: "双曲空间" }),
+  Object.freeze({ id: "compass", label: "单规室" }),
+  Object.freeze({ id: "numbers", label: "控制室的锁" }),
+  Object.freeze({ id: "quadratic", label: "控制室" }),
+  Object.freeze({ id: "knots", label: "档案室" }),
+  Object.freeze({ id: "ritual", label: "地下法阵" }),
 ]);
 
 const CLEAR_ROUTES = Object.freeze([
@@ -39,12 +39,9 @@ export function readProgressRecords() {
 
 export function recordLevelCompletion(levelId, elapsedMs, canvasMs) {
   const records = readProgressRecords();
-  const current = records[levelId] || {};
-  const previousCompletions = current.completions ?? current.attempts ?? 0;
   records[levelId] = {
-    completions: previousCompletions + 1,
-    bestMs: current.bestMs == null ? elapsedMs : Math.min(current.bestMs, elapsedMs),
-    lastMs: elapsedMs,
+    completed: true,
+    durationMs: elapsedMs,
     canvasMs,
     completedAt: new Date().toISOString(),
   };
@@ -60,7 +57,7 @@ export function getProgressSummary(records = readProgressRecords()) {
     const record = records[level.id];
     return {
       ...level,
-      completed: Boolean(record?.completions || record?.completedAt),
+      completed: Boolean(record?.completed || record?.completions || record?.completedAt),
       durationMs: getRecordDuration(record),
     };
   });
@@ -131,6 +128,7 @@ export function formatDuration(milliseconds) {
 
 function getRecordDuration(record) {
   if (!record || !Array.isArray(record.canvasMs)) return null;
+  if (Number.isFinite(record.durationMs)) return record.durationMs;
   if (Number.isFinite(record.lastMs)) return record.lastMs;
   if (Number.isFinite(record.bestMs)) return record.bestMs;
   return null;

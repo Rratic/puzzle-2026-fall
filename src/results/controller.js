@@ -19,7 +19,7 @@ class ResultsController {
   build() {
     this.mount.classList.add("results-view");
     const header = element("header", "results-header");
-    const kicker = element("div", "level-kicker", "PROJECT 111");
+    const kicker = element("div", "level-kicker", "识数鸡寻踪");
     const title = element("h1", "results-title", "行动结算");
     const status = element(
       "p",
@@ -40,8 +40,6 @@ class ResultsController {
     );
 
     const list = element("div", "results-levels");
-    const listTitle = element("h2", "results-section-title", "关卡记录");
-    list.append(listTitle);
     this.summary.levels.forEach((level) => {
       const row = element("div", "results-level-row");
       const name = element("span", "results-level-name", level.label);
@@ -169,7 +167,7 @@ function drawResultImage(summary, nickname) {
 
   ctx.fillStyle = "#2f7278";
   ctx.font = "700 24px system-ui, sans-serif";
-  ctx.fillText("PROJECT 111", 94, 94);
+  ctx.fillText("识数鸡寻踪", 94, 94);
   ctx.fillStyle = "#171717";
   ctx.font = "700 58px system-ui, sans-serif";
   ctx.fillText(summary.allCompleted ? "全部完成记录" : "通关记录", 92, 174);
@@ -237,7 +235,7 @@ function drawCertificate(summary, nickname) {
   ctx.textAlign = "center";
   ctx.fillStyle = "#2f7278";
   ctx.font = "700 34px system-ui, sans-serif";
-  ctx.fillText("PROJECT 111", canvas.width / 2, 220);
+  ctx.fillText("识数鸡寻踪", canvas.width / 2, 220);
   ctx.fillStyle = "#202725";
   ctx.font = "700 76px system-ui, sans-serif";
   ctx.fillText("地下法阵调查证书", canvas.width / 2, 350);

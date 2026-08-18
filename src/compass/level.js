@@ -19,7 +19,7 @@ const compassLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      title: "单规作图",
+      title: "单规室",
     }),
     textBlock(new URL("./content/transfer.md", import.meta.url)),
     puzzle("长度转移", PUZZLES.transfer),
