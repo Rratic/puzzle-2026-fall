@@ -91,16 +91,7 @@ class ConicController {
   }
 
   checkIntersection(point) {
-    const direct =
-      equationsEquivalent(this.coefficients[0], this.config.answers[0]) &&
-      equationsEquivalent(this.coefficients[1], this.config.answers[1]);
-    const swapped =
-      equationsEquivalent(this.coefficients[0], this.config.answers[1]) &&
-      equationsEquivalent(this.coefficients[1], this.config.answers[0]);
-    if (
-      (direct || swapped) &&
-      Math.abs(point.x - this.config.targetX) < 0.02
-    ) {
+    if (Math.abs(point.x - this.config.targetX) < 1e-7) {
       this.solved = true;
       this.onSolved();
     }
