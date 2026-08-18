@@ -28,7 +28,6 @@ const knotsLevel = {
     quiz("两个互相穿过的圈", QUESTIONS.hopf),
     quiz("右手三叶结", QUESTIONS.trefoil),
     quiz("8 字结", QUESTIONS.figureEight),
-    quiz("五叶结", QUESTIONS.cinquefoil),
     textBlock(new URL("./content/complete.md", import.meta.url)),
     actionsBlock([{ label: "进入地下法阵", target: "ritual" }]),
   ],

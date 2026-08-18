@@ -23,10 +23,4 @@ export const QUESTIONS = Object.freeze({
     accent: "#315b91",
     answer: "a^2 + a^-2 - 1 - z^2",
   },
-  cinquefoil: {
-    name: "五叶结 5_1",
-    diagram: "cinquefoil",
-    accent: "#8a5b18",
-    answer: "3a^-4 - 2a^-6 + 4a^-4z^2 - a^-6z^2 + a^-4z^4",
-  },
 });

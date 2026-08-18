@@ -265,8 +265,10 @@ function strokeCurveWindow(ctx, points, center, halfWidth, color, width) {
 
 function drawHopfLink(ctx, centerX, centerY, radius, color) {
   const secondary = "#315b91";
-  const first = ellipsePoints(centerX - 34, centerY, radius * 0.78, radius, -0.6);
-  const second = ellipsePoints(centerX + 34, centerY, radius * 0.78, radius, 0.6);
+  const loopRadius = radius * 0.78;
+  const centerOffset = loopRadius * 0.52;
+  const first = ellipsePoints(centerX - centerOffset, centerY, loopRadius, loopRadius, 0);
+  const second = ellipsePoints(centerX + centerOffset, centerY, loopRadius, loopRadius, 0);
   strokeClosedCurve(ctx, first, color, 7);
   strokeClosedCurve(ctx, second, secondary, 7);
 
