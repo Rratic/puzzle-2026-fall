@@ -89,14 +89,14 @@ function buildInversionPuzzle() {
   const construction = inverseConstruction(O, radius, P, {
     first: "U",
     second: "V",
-    inverse: "I",
+    inverse: "Q",
   });
 
   return {
     points: [O, P],
     initialCircles: [{ centerLabel: "O", radius }],
     expectedPoints: construction.points,
-    goalPoints: ["I"],
+    goalPoints: ["Q"],
     guides: [],
   };
 }

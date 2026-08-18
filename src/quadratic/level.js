@@ -6,7 +6,7 @@ function puzzle(options) {
     ...options,
     width: 960,
     height: 760,
-    caption: "使用 + / − 调整两行系数，再点选交点。",
+    caption: "使用 + / − 调整两组系数，再点选交点。",
     accessibility: { role: "application", focusable: false },
     createController: createConicController,
   });

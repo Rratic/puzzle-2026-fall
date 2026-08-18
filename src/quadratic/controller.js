@@ -131,7 +131,7 @@ class ConicController {
     }
     this.canvas.setAttribute(
       "aria-label",
-      `${this.config.title}，两行一般二次曲线的十二个整数系数均可用加减按钮调整`,
+      `${this.config.title}，两条一般二次曲线的十二个整数系数均可用加减按钮调整`,
     );
   }
 

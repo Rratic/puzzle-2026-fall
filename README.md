@@ -3,7 +3,7 @@
 python -m http.server
 ```
 
-设置存档为全部通过：
+设置存档为全部完成：
 
 ```js
 const ids = [

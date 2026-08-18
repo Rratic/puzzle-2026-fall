@@ -29,8 +29,8 @@ class ResultsController {
       this.summary.allCompleted
         ? "全部谜题已经完成。"
         : this.summary.cleared
-          ? "已通关一条路线，可继续补完其余谜题。"
-          : "尚未完成一条路线。",
+          ? "已通关一条路线，可继续完成其余谜题。"
+          : "尚未通关任何一条路线。",
     );
     header.append(title, status);
 

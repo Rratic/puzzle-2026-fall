@@ -264,7 +264,7 @@ function renderCanvasBlock(session, config, blockIndex) {
       candidate?.destroy?.();
       initializationFailed = true;
       caption.classList.add("canvas-error");
-      caption.textContent = "题目初始化失败。";
+      caption.textContent = "谜题初始化失败。";
       canvas.hidden = true;
       console.error(error);
     }
