@@ -101,7 +101,7 @@ function renderRichTextBlock(session, block) {
   const content = document.createElement("div");
   content.className = "rich-text";
   content.innerHTML = block.html || "";
-  if (block.math) void renderMath(content);
+  void renderMath(content);
   panel.append(content);
   return { block, element: panel, destroy() {} };
 }

@@ -21,10 +21,9 @@ const knotsLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      math: true,
-      title: "扭结不变量",
+      title: "档案室",
     }),
-    textBlock(new URL("./content/homfly.md", import.meta.url), { math: true }),
+    textBlock(new URL("./content/homfly.md", import.meta.url)),
     quiz("两个分离的圆", QUESTIONS.unlink),
     quiz("两个互相穿过的圈", QUESTIONS.hopf),
     quiz("右手三叶结", QUESTIONS.trefoil),

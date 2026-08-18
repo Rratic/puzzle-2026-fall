@@ -46,9 +46,6 @@ function validateBlock(levelId, block, index, knownLevels) {
     if (!block.src) {
       throw new TypeError(`${location} must provide src.`);
     }
-    if (block.math != null && typeof block.math !== "boolean") {
-      throw new TypeError(`${location} math must be a boolean.`);
-    }
   }
   if (block.type === "canvas") {
     if (typeof block.title !== "string" || block.title.length === 0) {

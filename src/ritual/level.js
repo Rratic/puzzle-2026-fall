@@ -8,7 +8,6 @@ const ritualLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      math: true,
       title: "地下法阵",
     }),
     canvasBlock({
@@ -20,7 +19,7 @@ const ritualLevel = {
       revealDelayMs: 2400,
       createController: createRitualController,
     }),
-    textBlock(new URL("./content/complete.md", import.meta.url), { math: true }),
+    textBlock(new URL("./content/complete.md", import.meta.url)),
     actionsBlock([{ label: "查看行动结算", target: "results" }]),
   ],
 };
