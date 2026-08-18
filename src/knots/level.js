@@ -25,7 +25,7 @@ const knotsLevel = {
     }),
     textBlock(new URL("./content/homfly.md", import.meta.url)),
     quiz("两个分离的圆", QUESTIONS.unlink),
-    quiz("两个互相穿过的圈", QUESTIONS.hopf),
+    quiz("互相穿过的圈（正交叉版）", QUESTIONS.hopf),
     quiz("右手三叶结", QUESTIONS.trefoil),
     quiz("8 字结", QUESTIONS.figureEight),
     textBlock(new URL("./content/complete.md", import.meta.url)),

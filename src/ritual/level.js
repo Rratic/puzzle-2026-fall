@@ -11,7 +11,7 @@ const ritualLevel = {
       title: "地下法阵",
     }),
     canvasBlock({
-      title: "校准 Hoffman–Singleton 法阵",
+      title: "调整法阵",
       caption: "点击三个相位环上的节点切换接法；叉号表示共同邻居规则仍有冲突。",
       width: SIZE.width,
       height: SIZE.height,
