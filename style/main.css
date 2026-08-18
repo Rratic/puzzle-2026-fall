@@ -67,11 +67,11 @@ button {
 	min-width: 0;
 }
 
-.level-content > * {
+.level-content>* {
 	scroll-margin-top: 18px;
 }
 
-.level-content > [hidden] {
+.level-content>[hidden] {
 	display: none;
 }
 
@@ -160,6 +160,11 @@ h1 {
 	max-width: 100%;
 	height: auto;
 	margin-inline: auto;
+}
+
+.rich-text a:-webkit-any-link {
+	color: #151a22;
+	text-decoration-thickness: 2px;
 }
 
 .canvas-panel {
@@ -458,7 +463,7 @@ h1 {
 	padding: 18px 20px;
 }
 
-.results-metric + .results-metric {
+.results-metric+.results-metric {
 	border-left: 1px solid var(--line);
 }
 
@@ -634,7 +639,7 @@ h1 {
 		padding-inline: 0;
 	}
 
-	.results-metric + .results-metric {
+	.results-metric+.results-metric {
 		border-top: 1px solid var(--line);
 		border-left: 0;
 	}
