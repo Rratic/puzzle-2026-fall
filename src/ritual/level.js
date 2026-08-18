@@ -16,7 +16,6 @@ const ritualLevel = {
       width: SIZE.width,
       height: SIZE.height,
       accessibility: { role: "application", focusable: true },
-      revealDelayMs: 2400,
       createController: createRitualController,
     }),
     textBlock(new URL("./content/complete.md", import.meta.url)),

@@ -1,12 +1,11 @@
 import levelEntries from "./levels.js";
 import { validateLevel } from "./level-blocks.js";
-import { ENABLE_CONSOLE_COMPLETION } from "./debug-config.js";
 import {
   getProgressSummary,
   recordLevelCompletion,
 } from "./progress.js";
 
-const LEVELS = levelEntries.filter(Boolean);
+const LEVELS = levelEntries;
 const levelsById = new Map(LEVELS.map((entry) => [entry.id, entry]));
 const levelContent = document.querySelector("#level-content");
 const levelNavigation = document.querySelector("#level-navigation");
@@ -175,7 +174,8 @@ function loadScript(src) {
 }
 
 function renderCanvasBlock(session, config, blockIndex) {
-  const canvasIndex = session.canvasBadges.length;
+  const canvasIndex = session.renderedCanvasCount;
+  session.renderedCanvasCount += 1;
   const alreadyCompleted = session.canvasState[canvasIndex];
   const panel = document.createElement("section");
   panel.className = "canvas-panel";
@@ -195,7 +195,6 @@ function renderCanvasBlock(session, config, blockIndex) {
   state.setAttribute("aria-label", alreadyCompleted ? "已完成" : "未完成");
   state.setAttribute("aria-live", "polite");
   if (alreadyCompleted) state.classList.add("is-solved");
-  session.canvasBadges.push(state);
   const controls = document.createElement("span");
   controls.className = "canvas-controls";
   controls.append(state);
@@ -246,7 +245,7 @@ function renderCanvasBlock(session, config, blockIndex) {
           session,
           canvasIndex,
           state,
-          options.revealDelayMs ?? config.revealDelayMs ?? 0,
+          options.revealDelayMs ?? 0,
         ),
       });
       if (
@@ -454,7 +453,7 @@ async function renderLevel(entry) {
       { length: level.blocks.filter((block) => block.type === "canvas").length },
       () => ({ startedAt: null, elapsedMs: null }),
     ),
-    canvasBadges: [],
+    renderedCanvasCount: 0,
     renderedBlocks: [],
     revealTimers: [],
   };
@@ -487,22 +486,6 @@ function updateLevelNavigation(entry) {
   levelNavigation.hidden = !showBack && !showResults;
 }
 
-function completeCurrentLevelFromConsole() {
-  const session = activeSession;
-  if (!session || session.destroyed) return null;
-  session.canvasState.forEach((solved, index) => {
-    if (solved) return;
-    finishCanvasTimer(session, index);
-    session.canvasState[index] = true;
-    const badge = session.canvasBadges[index];
-    badge?.classList.add("is-solved");
-    badge?.setAttribute("aria-label", "已完成");
-  });
-  completeLevel(session);
-  updateBlockVisibility(session);
-  return { id: session.level.id, completed: true };
-}
-
 function handleRouteChange() {
   const requestedId = decodeURIComponent(location.hash.replace(/^#/, ""));
   const entry = getLevelEntryFromHash();
@@ -514,7 +497,4 @@ function handleRouteChange() {
 }
 
 window.addEventListener("hashchange", handleRouteChange);
-if (ENABLE_CONSOLE_COMPLETION) {
-  window.completeCurrentLevel = completeCurrentLevelFromConsole;
-}
 handleRouteChange();

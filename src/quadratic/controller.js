@@ -343,18 +343,6 @@ class ConicController {
   }
 }
 
-function equationsEquivalent(values, expected) {
-  if (!values || values.length !== expected.length) {
-    return false;
-  }
-  const pivot = expected.findIndex((value) => value !== 0);
-  if (pivot < 0 || values[pivot] === 0) {
-    return false;
-  }
-  const scale = values[pivot] / expected[pivot];
-  return expected.every((value, index) => values[index] === value * scale);
-}
-
 function conicValue(coefficients, x, y) {
   const [a, b, c, d, e, f] = coefficients;
   return a * x * x + b * x * y + c * y * y + d * x + e * y + f;

@@ -406,16 +406,13 @@ function downloadBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function drawFittedText(ctx, text, x, y, maxWidth, initialSize, centered = false) {
+function drawFittedText(ctx, text, x, y, maxWidth, initialSize) {
   let size = initialSize;
   do {
     ctx.font = `700 ${size}px system-ui, sans-serif`;
     size -= 2;
   } while (size > 20 && ctx.measureText(text).width > maxWidth);
-  const previousAlign = ctx.textAlign;
-  if (centered) ctx.textAlign = "center";
   ctx.fillText(text, x, y);
-  ctx.textAlign = previousAlign;
 }
 
 function safeFilename(value) {

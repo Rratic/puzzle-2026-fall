@@ -1,6 +1,6 @@
 const STORAGE_KEY = "progress";
 
-export const PUZZLE_LEVELS = Object.freeze([
+const PUZZLE_LEVELS = Object.freeze([
   Object.freeze({ id: "library", label: "一楼图书角" }),
   Object.freeze({ id: "mines", label: "机关区" }),
   Object.freeze({ id: "maps", label: "深层楼梯间" }),
@@ -29,7 +29,7 @@ const PREREQUISITES = Object.freeze({
   knots: ["maps"],
 });
 
-export function readProgressRecords() {
+function readProgressRecords() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
   } catch {
@@ -43,7 +43,6 @@ export function recordLevelCompletion(levelId, elapsedMs, canvasMs) {
     completed: true,
     durationMs: elapsedMs,
     canvasMs,
-    completedAt: new Date().toISOString(),
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
@@ -57,7 +56,7 @@ export function getProgressSummary(records = readProgressRecords()) {
     const record = records[level.id];
     return {
       ...level,
-      completed: Boolean(record?.completed || record?.completions || record?.completedAt),
+      completed: record?.completed === true,
       durationMs: getRecordDuration(record),
     };
   });
@@ -127,9 +126,5 @@ export function formatDuration(milliseconds) {
 }
 
 function getRecordDuration(record) {
-  if (!record || !Array.isArray(record.canvasMs)) return null;
-  if (Number.isFinite(record.durationMs)) return record.durationMs;
-  if (Number.isFinite(record.lastMs)) return record.lastMs;
-  if (Number.isFinite(record.bestMs)) return record.bestMs;
-  return null;
+  return Number.isFinite(record?.durationMs) ? record.durationMs : null;
 }
