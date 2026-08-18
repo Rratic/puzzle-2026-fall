@@ -50,7 +50,7 @@ class PolynomialInputController {
     this.input.autocomplete = "off";
     this.input.autocapitalize = "off";
     this.input.spellcheck = false;
-    this.input.placeholder = "输入关于 a、z 的 Laurent 多项式";
+    this.input.placeholder = "参考格式：a^2z - a^(-2)*z^-1 + 9";
     this.input.setAttribute("aria-label", `${this.question.name}的 HOMFLY-PT 多项式`);
 
     this.submitButton = document.createElement("button");
