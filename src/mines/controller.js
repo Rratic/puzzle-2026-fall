@@ -19,7 +19,8 @@ const SYMBOL_TO_CELL = Object.freeze({
 });
 
 const DRAG_THRESHOLD = 6;
-const LONG_PRESS_DURATION = 520;
+const MAGNIFIER_RADIUS = 9;
+const MAGNIFIER_HANDLE_LENGTH = 11;
 
 export function createMinesweeperController(options) {
   return new MinesweeperLogicController(options);
@@ -33,19 +34,22 @@ class MinesweeperLogicController {
     this.ctx = canvas.getContext("2d");
     this.board = { columns: 0, rows: 0, cellSize: CELL_SIZE };
     this.pointer = null;
+    this.magnifier = {
+      x: config.width - 38,
+      y: config.height - 30,
+      dragging: false,
+    };
     this.ready = false;
     this.loadError = "";
     this.destroyed = false;
     this.solved = false;
     this.exploded = false;
     this.explodedCell = null;
-    this.ignoreContextMenuUntil = 0;
 
     this.handlePointerDown = (event) => this.onPointerDown(event);
     this.handlePointerMove = (event) => this.onPointerMove(event);
     this.handlePointerUp = (event) => this.onPointerUp(event);
     this.handlePointerCancel = (event) => this.onPointerCancel(event);
-    this.handleContextMenu = (event) => this.onContextMenu(event);
     this.handleKeyDown = (event) => this.onKeyDown(event);
     this.handleResize = () => {
       if (resizeCanvasBuffer(
@@ -68,12 +72,11 @@ class MinesweeperLogicController {
         { type: "pointermove", listener: this.handlePointerMove },
         { type: "pointerup", listener: this.handlePointerUp },
         { type: "pointercancel", listener: this.handlePointerCancel },
-        { type: "contextmenu", listener: this.handleContextMenu },
         { type: "keydown", listener: this.handleKeyDown },
       ],
       onResize: this.handleResize,
       onDeactivate: () => {
-        this.clearLongPress();
+        this.resetMagnifier();
         this.pointer = null;
       },
     });
@@ -105,6 +108,7 @@ class MinesweeperLogicController {
         rows: mapData.height,
         cellSize: CELL_SIZE,
       };
+      this.resetMagnifier();
       this.ready = true;
       this.resetBoard();
       this.updateStatus();
@@ -124,26 +128,15 @@ class MinesweeperLogicController {
     this.solved = false;
     this.exploded = false;
     this.explodedCell = null;
-    this.revealedSafe = 0;
     this.flagCount = 0;
     this.mineCount = this.cells.reduce(
       (total, cell) => total + (cell.mine ? 1 : 0),
       0,
     );
-    this.safeCount = this.cells.reduce(
-      (total, cell) => total + (cell.active && !cell.mine ? 1 : 0),
-      0,
-    );
-
-    this.cells.forEach((cell) => {
-      if (cell.active && !cell.mine && cell.revealed) {
-        this.revealedSafe += 1;
-      }
-    });
   }
 
   onPointerDown(event) {
-    if (!this.ready || event.button === 2) {
+    if (!this.ready || event.button !== 0) {
       return;
     }
 
@@ -154,20 +147,18 @@ class MinesweeperLogicController {
       this.config.width,
       this.config.height,
     );
+    const draggingMagnifier = this.isMagnifierPoint(point);
     this.pointer = {
       id: event.pointerId,
       start: point,
       dragged: false,
-      longPressTriggered: false,
-      longPressTimer: 0,
+      draggingMagnifier,
     };
-    if (event.pointerType !== "mouse") {
-      this.pointer.longPressTimer = window.setTimeout(
-        () => this.onLongPress(event.pointerId),
-        LONG_PRESS_DURATION,
-      );
+    if (draggingMagnifier) {
+      this.magnifier.dragging = true;
     }
     this.canvas.setPointerCapture?.(event.pointerId);
+    this.draw();
   }
 
   onPointerMove(event) {
@@ -187,9 +178,16 @@ class MinesweeperLogicController {
       point.y - this.pointer.start.y,
     );
 
+    if (this.pointer.draggingMagnifier) {
+      this.magnifier.x = point.x;
+      this.magnifier.y = point.y;
+      this.pointer.dragged = totalDistance >= DRAG_THRESHOLD;
+      this.draw();
+      return;
+    }
+
     if (totalDistance >= DRAG_THRESHOLD) {
       this.pointer.dragged = true;
-      this.clearLongPress();
     }
   }
 
@@ -199,10 +197,9 @@ class MinesweeperLogicController {
     }
 
     event.preventDefault();
-    this.clearLongPress();
     this.canvas.releasePointerCapture?.(event.pointerId);
     const wasDragged = this.pointer.dragged;
-    const wasLongPress = this.pointer.longPressTriggered;
+    const draggingMagnifier = this.pointer.draggingMagnifier;
     const point = canvasPointFromEvent(
       this.canvas,
       event,
@@ -211,14 +208,24 @@ class MinesweeperLogicController {
     );
     this.pointer = null;
 
-    if (!wasDragged && !wasLongPress && event.button === 0) {
+    if (draggingMagnifier) {
+      this.resetMagnifier();
+      if (wasDragged) {
+        this.revealAtPoint(point);
+      } else {
+        this.draw();
+      }
+      return;
+    }
+
+    if (!wasDragged && event.button === 0) {
       if (this.exploded) {
         this.resetBoard();
         this.updateStatus();
         this.draw();
         return;
       }
-      this.revealAtPoint(point);
+      this.toggleFlagAtPoint(point);
     }
   }
 
@@ -226,40 +233,25 @@ class MinesweeperLogicController {
     if (!this.pointer || this.pointer.id !== event.pointerId) {
       return;
     }
-    this.clearLongPress();
     this.canvas.releasePointerCapture?.(event.pointerId);
+    if (this.pointer.draggingMagnifier) {
+      this.resetMagnifier();
+      this.draw();
+    }
     this.pointer = null;
   }
 
-  onLongPress(pointerId) {
-    if (!this.pointer || this.pointer.id !== pointerId || this.pointer.dragged) {
-      return;
-    }
-    this.pointer.longPressTimer = 0;
-    this.pointer.longPressTriggered = true;
-    this.ignoreContextMenuUntil = performance.now() + 1000;
-    this.toggleFlagAtPoint(this.pointer.start);
+  isMagnifierPoint(point) {
+    const distanceX = point.x - this.magnifier.x;
+    const distanceY = point.y - this.magnifier.y;
+    return distanceX * distanceX + distanceY * distanceY <= (MAGNIFIER_RADIUS + 7) ** 2;
   }
 
-  clearLongPress() {
-    if (this.pointer?.longPressTimer) {
-      window.clearTimeout(this.pointer.longPressTimer);
-      this.pointer.longPressTimer = 0;
-    }
-  }
-
-  onContextMenu(event) {
-    event.preventDefault();
-    if (performance.now() < this.ignoreContextMenuUntil) {
-      return;
-    }
-    const point = canvasPointFromEvent(
-      this.canvas,
-      event,
-      this.config.width,
-      this.config.height,
-    );
-    this.toggleFlagAtPoint(point);
+  resetMagnifier() {
+    const boardHeight = this.board.rows * this.board.cellSize;
+    this.magnifier.x = this.config.width - 38;
+    this.magnifier.y = boardHeight + (this.config.height - boardHeight) / 2;
+    this.magnifier.dragging = false;
   }
 
   toggleFlagAtPoint(point) {
@@ -338,7 +330,6 @@ class MinesweeperLogicController {
       }
 
       cell.revealed = true;
-      this.revealedSafe += 1;
 
       if (cell.adjacent === 0) {
         this.getNeighbors(column, row).forEach((neighbor) => {
@@ -384,7 +375,6 @@ class MinesweeperLogicController {
     if (
       this.solved ||
       this.exploded ||
-      this.revealedSafe !== this.safeCount ||
       !this.cells.every((cell) => !cell.active || (cell.mine ? cell.flagged : !cell.flagged))
     ) {
       return;
@@ -401,7 +391,7 @@ class MinesweeperLogicController {
       return;
     }
     if (this.solved) {
-      this.canvas.setAttribute("aria-label", `${this.config.title}，所有安全格和雷均已确认`);
+      this.canvas.setAttribute("aria-label", `${this.config.title}，所有地雷均已正确插旗`);
       return;
     }
 
@@ -413,7 +403,7 @@ class MinesweeperLogicController {
     const remaining = Math.max(0, this.mineCount - this.flagCount);
     this.canvas.setAttribute(
       "aria-label",
-      `${this.config.title}，已确认 ${this.revealedSafe}/${this.safeCount} 个安全节点，待标记 ${remaining}`,
+      `${this.config.title}，已插旗 ${this.flagCount}/${this.mineCount}，待标记 ${remaining}`,
     );
   }
 
@@ -472,6 +462,8 @@ class MinesweeperLogicController {
 
     this.drawBoardSurface();
     this.drawCells();
+    this.drawToolTray();
+    this.drawMagnifier();
   }
 
   drawBoardSurface() {
@@ -486,6 +478,40 @@ class MinesweeperLogicController {
         this.drawCell(this.getCell(column, row), column, row);
       }
     }
+  }
+
+  drawToolTray() {
+    const boardHeight = this.board.rows * this.board.cellSize;
+    if (this.config.height <= boardHeight) {
+      return;
+    }
+    const ctx = this.ctx;
+    ctx.fillStyle = "#cbd2d4";
+    ctx.fillRect(0, boardHeight, this.config.width, this.config.height - boardHeight);
+    ctx.strokeStyle = "#a0abb0";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, boardHeight + 0.5);
+    ctx.lineTo(this.config.width, boardHeight + 0.5);
+    ctx.stroke();
+  }
+
+  drawMagnifier() {
+    const ctx = this.ctx;
+    const { x, y } = this.magnifier;
+    ctx.save();
+    ctx.strokeStyle = this.magnifier.dragging ? "#a15f5b" : "#4d575d";
+    ctx.fillStyle = this.magnifier.dragging ? "#f0d8d5" : "#eef1f1";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x - 5, y - 5, MAGNIFIER_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x + 5, y + 5);
+    ctx.lineTo(x + 5 + MAGNIFIER_HANDLE_LENGTH, y + 5 + MAGNIFIER_HANDLE_LENGTH);
+    ctx.stroke();
+    ctx.restore();
   }
 
   drawCell(cell, column, row) {

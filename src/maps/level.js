@@ -9,7 +9,7 @@ const mapsLevel = {
   blocks: [
     textBlock(new URL("./content/intro.md", import.meta.url), {
       kicker: true,
-      title: "平面图的四染色",
+      title: "深层楼梯间",
     }),
     canvasBlock({
       title: "为平面图着色",

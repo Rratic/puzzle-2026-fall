@@ -13,12 +13,13 @@ export const PUZZLE_LEVELS = Object.freeze([
 ]);
 
 const CLEAR_ROUTES = Object.freeze([
+  Object.freeze(["library", "maps", "hyperbolic", "compass", "knots", "ritual"]),
   Object.freeze(["mines", "maps", "hyperbolic", "compass", "knots", "ritual"]),
+  Object.freeze(["library", "maps", "numbers", "quadratic", "knots", "ritual"]),
   Object.freeze(["mines", "maps", "numbers", "quadratic", "knots", "ritual"]),
 ]);
 
 const PREREQUISITES = Object.freeze({
-  maps: ["mines"],
   hyperbolic: ["maps"],
   compass: ["hyperbolic"],
   numbers: ["maps"],
@@ -71,6 +72,12 @@ export function getProgressSummary(records = readProgressRecords()) {
     if (level.id === "knots") {
       level.available = Boolean(
         completedById.get("compass") || completedById.get("quadratic"),
+      );
+      return;
+    }
+    if (level.id === "maps") {
+      level.available = Boolean(
+        completedById.get("library") || completedById.get("mines"),
       );
       return;
     }

@@ -24,7 +24,7 @@ const libraryLevel = {
       createController: createPackingController,
     }),
     textBlock(new URL("./content/complete.md", import.meta.url)),
-    actionsBlock([{ label: "前往地下室", target: "mines" }]),
+    actionsBlock([{ label: "进入深层楼梯间", target: "maps" }]),
   ],
 };
 
